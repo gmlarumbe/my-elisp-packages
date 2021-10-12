@@ -1,4 +1,4 @@
-a;;; others-functions.el --- Third party custom functions  -*- lexical-binding: t -*-
+;;; others-functions.el --- Third party custom functions  -*- lexical-binding: t -*-
 ;;; Commentary:
 ;;
 ;; This file hosts some general purpose functions that I found over the Internet
@@ -7,9 +7,7 @@ a;;; others-functions.el --- Third party custom functions  -*- lexical-binding: 
 ;;
 ;;; Code:
 
-(require 'f)
 (require 'with-editor)
-(require 'xref)
 
 ;;;; Restart code
 ;; https://emacs.stackexchange.com/questions/5428/restart-emacs-from-within-emacs
