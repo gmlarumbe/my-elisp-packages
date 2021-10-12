@@ -384,6 +384,43 @@ is no include option for `diff' utils."
      (concat "diff -X " exclude-file " -r " dir1 " " dir2 " > " out-file))))
 
 
+;;;; Autoloads
+;; https://emacs.stackexchange.com/questions/33627/how-to-generate-and-activate-autoloads-for-local-packages
+;;
+;; Could also be based upon `update-directory-autoloads' (non-recursive).
+;; It seems it works at startup, not possible once functions have already been defined.
+;;
+;; INFO: Currently, autoloads are managed by `straight' by placing packages inside Git repos.
+;; If for some reason, any package function needs to be autoloaded by using this function,
+;; it would be necessary to first load this package in the init file.
+
+(defvar larumbe/autoloads-local-dir (concat user-emacs-directory "local-autoloads")
+  "Emacs directory for local packages generated autoloads.")
+
+;;;###autoload
+(defun larumbe/autoloads-file (file)
+  "Generate autoloads for FILE in `larumbe/autoloads-local-dir' directory and load them.
+
+This could be used to generate autoloads from the magic comments
+instead of :command keyword inside a use-package macro, e.g:
+
+(use-package my-pkg
+  :init
+  (larumbe/autoloads-file \"~/.elisp/pkg/some-pkg.el\"))
+
+This would be a manual approach without adding each new function to the :commands keyword,
+nor using a package manager (i.e. straight) that handles autoloads automatically."
+  (let* ((autoloads-dir larumbe/autoloads-local-dir)
+         (filename (file-name-nondirectory (file-name-sans-extension file)))
+         (generated-autoload-file (concat autoloads-dir "/" filename "-autoloads.el")))
+    (unless (file-exists-p autoloads-dir)
+      (make-directory autoloads-dir))
+    (update-file-autoloads file t)
+    (load-file generated-autoload-file)))
+
+
+
+
 (provide 'larumbe-functions)
 
 
