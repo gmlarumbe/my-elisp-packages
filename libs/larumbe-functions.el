@@ -398,7 +398,8 @@ Meant to be used in local and remote."
 ;;;###autoload
 (defun larumbe/buffer-expand-filenames (&optional absolute)
   "Expands filenames paths present in `current-buffer' line by line.
-If ABSOLUTE is set to non-nil filenames will expand to their absolute paths."
+If ABSOLUTE is nil expand relative to `default-directory'.
+If ABSOLUTE is non-nil filenames will expand to their absolute paths."
   (interactive)
   (let (cur-line)
     (save-excursion

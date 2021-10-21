@@ -53,10 +53,8 @@ INFO: This is a Workaround for Vivado Naming Conventions at IP Wizard generation
           (downcase-region (point) (point-at-eol))))))
 
 
-;; Function to parse files for project from Vivado XPR
 (defun larumbe/fpga-tags-vivado-files-from-xpr ()
-  "Create `gtags.files' file for a specific project.
-Avoid creating GTAGS for every project included inside a repo folder"
+  "Create `gtags.files' from Vivado XPR file."
   (with-temp-buffer
     ;; (view-buffer-other-window (current-buffer))      ; Option A: preferred (not valid if modifying the temp buffer)
     ;; (clone-indirect-buffer-other-window "*debug*" t) ; Option B: used here (however, cannot save temp buffer while debugging)
@@ -69,20 +67,19 @@ Avoid creating GTAGS for every project included inside a repo folder"
     (delete-whitespace-rectangle (point-min) (point-max))
     (larumbe/fpga-tags-vivado-convert-xci-to-v-and-downcase) ; Replace xci by corresponding .v files (if existing)
     (keep-lines larumbe/hdl-source-extension-regex (point-min) (point-max)) ; Remove any non verilog/vhdl file (such as waveconfig, verilog templates, etc...)
-    (larumbe/buffer-expand-filenames)
+    ;; Make sure expansion is made relative to SVN sandbox path (same as gtags.file path)
+    (let ((default-directory larumbe/fpga-tags-vivado-gtags-dirs-directory))
+      (larumbe/buffer-expand-filenames nil))
     (write-file larumbe/fpga-tags-vivado-gtags-file)))
 
 
-;; Function to parse files for project from Vivado XPR
 ;;;###autoload
 (defun larumbe/fpga-tags-vivado ()
-  "Create `gtags.files' file for a specific project.
-Avoid creating GTAGS for every project included inside a repo folder"
+  "Create gtags from created `gtags.files' by parsing Vivado XPR files."
   (interactive)
   (larumbe/fpga-tags-vivado-set-active-xpr)
-  (save-window-excursion
-    (larumbe/fpga-tags-vivado-files-from-xpr)
-    (ggtags-create-tags larumbe/fpga-tags-vivado-gtags-dirs-directory)))
+  (larumbe/fpga-tags-vivado-files-from-xpr)
+  (larumbe/gtags-create-tags-async-process larumbe/fpga-tags-vivado-gtags-dirs-directory))
 
 
 ;;;; Quartus tags
@@ -137,33 +134,12 @@ Checks Works in current buffer."
       (forward-line))))
 
 
-(defun larumbe/fpga-tags-altera-set-active-project ()
-  "Retrieve project list and set variables accordingly.
-Copied from `larumbe/fpga-tags-vivado-set-active-xpr' for Vivado xpr."
-  (let ((project)
-        (files-list))
-    ;; Get Project name
-    (setq project (completing-read "Select project: " (mapcar 'car larumbe/fpga-tags-altera-list))) ;; Read previous variable and get list of first element of each assoc list
-    (setq files-list (cdr (assoc project larumbe/fpga-tags-altera-list)))
-    ;; Set parameters accordingly
-    (setq larumbe/fpga-tags-altera-tcl-dir              (nth 0 files-list))
-    (setq larumbe/fpga-tags-altera-tcl-file             (nth 1 files-list))
-    (setq larumbe/fpga-tags-altera-gtags-dirs-directory (nth 2 files-list))
-    (setq larumbe/fpga-tags-altera-gtags-dirs-file      (nth 3 files-list))))
-
-
-;;;###autoload
-(defun larumbe/fpga-tags-altera ()
-  "Create `gtags.files' file for a specific Altera project.
-Based on a search from `files_and_libraries.tcl' file.
-Avoid creating GTAGS for every project included inside a sandbox."
-  (interactive)
-  ;; First thing is to set project and paths
-  (larumbe/fpga-tags-altera-set-active-project)
+(defun larumbe/fpga-tags-altera-create-file-list ()
+  "Create `gtags.files' from altera project tcl file."
   (save-window-excursion
     (with-temp-buffer
       ;; INFO: Debugging with-temp-buffer:
-      ;; (view-buffer-other-window (current-buffer))      ; Option A: preferred (not valid if modifying the temp buffer)
+      ;; (view-buffer-other-window (current-buffer))      ; Option A: preferred (not valid since temp buffer cannot be modified)
       ;; (clone-indirect-buffer-other-window "*debug*" t) ; Option B: used here (however, cannot save temp buffer while debugging)
       ;; End of INFO
       (insert-file-contents (larumbe/path-join larumbe/fpga-tags-altera-tcl-dir larumbe/fpga-tags-altera-tcl-file))
@@ -192,14 +168,39 @@ Avoid creating GTAGS for every project included inside a sandbox."
       (larumbe/replace-regexp-whole-buffer " +" "")  ; Delete whitespaces in PATHs
       (goto-char (point-min))
       (while (re-search-forward "\\.$" nil t) ; Remove search paths with previous or current dir
-        (beginning-of-line)                   ; Equivalent to `flush-lines' but
-        (kill-line 1))                        ; for non-interactive use
+        (beginning-of-line)                  ; Equivalent to `flush-lines' but
+        (kill-line 1))                       ; for non-interactive use
       (larumbe/fpga-tags-altera-find-repeated-included-files) ; Remove repeated files (due to previous directory expansion)
-      (larumbe/buffer-expand-filenames)
-      (write-file (larumbe/path-join larumbe/fpga-tags-altera-gtags-dirs-directory larumbe/fpga-tags-altera-gtags-dirs-file))))
-  ;; Create Tags from gtags.files
-  (f-touch (larumbe/path-join larumbe/fpga-tags-altera-gtags-dirs-directory "GTAGS")) ; Sometimes there are errors with gtags if file didnt exist before
-  (ggtags-create-tags larumbe/fpga-tags-altera-gtags-dirs-directory))
+      ;; Make sure expansion is made relative to SVN sandbox path (same as gtags.file path)
+      (let ((default-directory larumbe/fpga-tags-altera-gtags-dirs-directory))
+        (larumbe/buffer-expand-filenames nil))
+      (write-file (larumbe/path-join larumbe/fpga-tags-altera-gtags-dirs-directory larumbe/fpga-tags-altera-gtags-dirs-file)))))
+
+
+(defun larumbe/fpga-tags-altera-set-active-project ()
+  "Retrieve project list and set variables accordingly.
+Copied from `larumbe/fpga-tags-vivado-set-active-xpr' for Vivado xpr."
+  (let ((project)
+        (files-list))
+    ;; Get Project name
+    (setq project (completing-read "Select project: " (mapcar 'car larumbe/fpga-tags-altera-list))) ;; Read previous variable and get list of first element of each assoc list
+    (setq files-list (cdr (assoc project larumbe/fpga-tags-altera-list)))
+    ;; Set parameters accordingly
+    (setq larumbe/fpga-tags-altera-tcl-dir              (nth 0 files-list))
+    (setq larumbe/fpga-tags-altera-tcl-file             (nth 1 files-list))
+    (setq larumbe/fpga-tags-altera-gtags-dirs-directory (nth 2 files-list))
+    (setq larumbe/fpga-tags-altera-gtags-dirs-file      (nth 3 files-list))))
+
+
+
+;;;###autoload
+(defun larumbe/fpga-tags-altera ()
+  "Create `gtags.files' file for a specific Altera project.
+Based on a search from `files_and_libraries.tcl' file."
+  (interactive)
+  (larumbe/fpga-tags-altera-set-active-project)
+  (larumbe/fpga-tags-altera-create-file-list)
+  (larumbe/gtags-create-tags-async-process larumbe/fpga-tags-altera-gtags-dirs-directory))
 
 
 ;;;; Moduledef tags
