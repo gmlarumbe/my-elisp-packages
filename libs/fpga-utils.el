@@ -205,27 +205,50 @@ Based on a search from `files_and_libraries.tcl' file."
 
 ;;;; Moduledef tags
 ;;;###autoload
-(defun larumbe/fpga-tags-files-from-moduledef ()
-  "Manually create gtags.files from `source_files.tcl'.
-Should only be used interactive and in the source_files.tcl buffer.
-The output gtags.files will be created in the same directory.
+(defun larumbe/fpga-tags-files-from-source-files-tcl-get-files (file dir)
+  "Create gtags.files from FILE `source_files.tcl'.
+
+INFO: This function assumes that the `source_files.tcl' will be placed inside its original path (syn_targets).
+This is necessary to properly generate the relative paths for the file list when expanding filenames.
+It will expand these according to the input DIR.
+DANGER: Therefore, make sure DIR is the root project path, where `gtags.files' would be placed.
 
 INFO: Useful function for Verilog-Perl hierarchy extraction."
-  (interactive)
-  (let ((sources-file (buffer-file-name))
-        (output-file (concat default-directory "gtags.files")))
-    (when (not (string-equal
-                (file-relative-name (buffer-file-name))
-                "source_list.tcl"))
+  (interactive "Fsource_files.tcl path: \nDProject root: ")
+  (let ((output-file (larumbe/path-join dir "gtags.files")))
+    (unless (or (string= (file-name-nondirectory file) "source_list.tcl")
+                (string= (file-name-nondirectory file) "source_list_script.tcl"))
       (error "Not in 'source_list.tcl file!!"))
     (with-temp-buffer
       ;; (clone-indirect-buffer-other-window "*debug*" t) ; Option B: used here (however, cannot save temp buffer while debugging)
-      (insert-file-contents sources-file)
+      (insert-file-contents file)
       (keep-lines larumbe/hdl-source-extension-regex)
       (delete-duplicate-lines (point-min) (point-max)) ; for libraries setup of previous files
-      (larumbe/buffer-expand-filenames)
+      ;; First expand with absolute path ...
+      (let ((default-directory (file-name-directory file)))
+        (larumbe/buffer-expand-filenames t))
+      ;; and then get relative path with respect to current dir
+      ;; INFO: Must be executed at the root of a sandbox!
+      (let ((default-directory dir))
+        (larumbe/buffer-expand-filenames nil))
       (write-file output-file))))
 
+
+(defun larumbe/fpga-tags-files-from-source-files-tcl ()
+  "Extract GTAGS from `source_files.tcl' at current projectile root."
+  (interactive)
+  (let* ((dir         (projectile-project-root))
+         (syn-tgt-dir (larumbe/path-join dir "syn_targets"))
+         (sources-file))
+    (unless (file-exists-p syn-tgt-dir)
+      (error "No syn_targets for current project!"))
+    (setq sources-file (read-file-name "source_files.tcl path: " syn-tgt-dir))
+    (larumbe/fpga-tags-files-from-source-files-tcl-get-files sources-file dir)
+    (larumbe/gtags-create-tags-async-process dir)))
+
+
+;; TODO: Create function that extracts hierarchy at vhier-utils.
+;; TODO: Refactor larumbe/buffer-expand-file-names to be passed a parameter to override the default-directory instead of using (let) to change it
 
 ;;;; Vivado Synthesis
 (defvar larumbe/vivado-binary-path nil)
