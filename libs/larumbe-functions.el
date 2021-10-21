@@ -437,7 +437,7 @@ For example, in SystemVerilog, packages might need to be included before other f
 If optional APPEND is set to non-nil, append result to existing FILE.
 Otherwise, overwrite old existing FILE with new results.
 If optional EXCLUDE-RE is set, delete paths with that regexp from generated file.
-If ABS-PATH is set to non-nil the directory files will be shown as relative paths."
+If ABS-PATH is set to non-nil the directory files will be shown as absolute paths."
   (let (buf)
     (save-window-excursion
       (with-temp-buffer
@@ -448,7 +448,7 @@ If ABS-PATH is set to non-nil the directory files will be shown as relative path
             (larumbe/buffer-expand-filenames t)
           (larumbe/buffer-expand-filenames))
         ;; Append to existing file
-        (when (and (file-exists-p (concat base-dir file))
+        (when (and (file-exists-p (larumbe/path-join base-dir file))
                    append)
           (setq buf (current-buffer))
           (find-file file)
@@ -458,7 +458,7 @@ If ABS-PATH is set to non-nil the directory files will be shown as relative path
         ;; Filter according to optional parameter
         (when exclude-re
           (flush-lines exclude-re (point-min) (point-max)))
-        (write-file file)))))
+        (write-file (larumbe/path-join base-dir file))))))
 
 
 ;; https://stackoverflow.com/questions/3775377/how-do-you-diff-a-directory-for-only-files-of-a-specific-type
