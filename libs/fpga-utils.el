@@ -68,8 +68,7 @@ INFO: This is a Workaround for Vivado Naming Conventions at IP Wizard generation
     (larumbe/fpga-tags-vivado-convert-xci-to-v-and-downcase) ; Replace xci by corresponding .v files (if existing)
     (keep-lines larumbe/hdl-source-extension-regex (point-min) (point-max)) ; Remove any non verilog/vhdl file (such as waveconfig, verilog templates, etc...)
     ;; Make sure expansion is made relative to SVN sandbox path (same as gtags.file path)
-    (let ((default-directory larumbe/fpga-tags-vivado-gtags-dirs-directory))
-      (larumbe/buffer-expand-filenames nil))
+    (larumbe/buffer-expand-filenames nil larumbe/fpga-tags-vivado-gtags-dirs-directory)
     (write-file larumbe/fpga-tags-vivado-gtags-file)))
 
 
@@ -172,8 +171,7 @@ Checks Works in current buffer."
         (kill-line 1))                       ; for non-interactive use
       (larumbe/fpga-tags-altera-find-repeated-included-files) ; Remove repeated files (due to previous directory expansion)
       ;; Make sure expansion is made relative to SVN sandbox path (same as gtags.file path)
-      (let ((default-directory larumbe/fpga-tags-altera-gtags-dirs-directory))
-        (larumbe/buffer-expand-filenames nil))
+      (larumbe/buffer-expand-filenames nil larumbe/fpga-tags-altera-gtags-dirs-directory)
       (write-file (larumbe/path-join larumbe/fpga-tags-altera-gtags-dirs-directory larumbe/fpga-tags-altera-gtags-dirs-file)))))
 
 
@@ -203,8 +201,7 @@ Based on a search from `files_and_libraries.tcl' file."
   (larumbe/gtags-create-tags-async-process larumbe/fpga-tags-altera-gtags-dirs-directory))
 
 
-;;;; Moduledef tags
-;;;###autoload
+;;;; source_files.tcl tags
 (defun larumbe/fpga-tags-files-from-source-files-tcl-get-files (file dir)
   "Create gtags.files from FILE `source_files.tcl'.
 
@@ -214,7 +211,6 @@ It will expand these according to the input DIR.
 DANGER: Therefore, make sure DIR is the root project path, where `gtags.files' would be placed.
 
 INFO: Useful function for Verilog-Perl hierarchy extraction."
-  (interactive "Fsource_files.tcl path: \nDProject root: ")
   (let ((output-file (larumbe/path-join dir "gtags.files")))
     (unless (or (string= (file-name-nondirectory file) "source_list.tcl")
                 (string= (file-name-nondirectory file) "source_list_script.tcl"))
@@ -225,15 +221,14 @@ INFO: Useful function for Verilog-Perl hierarchy extraction."
       (keep-lines larumbe/hdl-source-extension-regex)
       (delete-duplicate-lines (point-min) (point-max)) ; for libraries setup of previous files
       ;; First expand with absolute path ...
-      (let ((default-directory (file-name-directory file)))
-        (larumbe/buffer-expand-filenames t))
+      (larumbe/buffer-expand-filenames t (file-name-directory file))
       ;; and then get relative path with respect to current dir
       ;; INFO: Must be executed at the root of a sandbox!
-      (let ((default-directory dir))
-        (larumbe/buffer-expand-filenames nil))
+      (larumbe/buffer-expand-filenames nil dir)
       (write-file output-file))))
 
 
+;;;###autoload
 (defun larumbe/fpga-tags-files-from-source-files-tcl ()
   "Extract GTAGS from `source_files.tcl' at current projectile root."
   (interactive)
@@ -246,9 +241,6 @@ INFO: Useful function for Verilog-Perl hierarchy extraction."
     (larumbe/fpga-tags-files-from-source-files-tcl-get-files sources-file dir)
     (larumbe/gtags-create-tags-async-process dir)))
 
-
-;; TODO: Create function that extracts hierarchy at vhier-utils.
-;; TODO: Refactor larumbe/buffer-expand-file-names to be passed a parameter to override the default-directory instead of using (let) to change it
 
 ;;;; Vivado Synthesis
 (defvar larumbe/vivado-binary-path nil)

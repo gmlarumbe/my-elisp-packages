@@ -396,12 +396,16 @@ Meant to be used in local and remote."
 
 ;;;; More complex/less frequently used
 ;;;###autoload
-(defun larumbe/buffer-expand-filenames (&optional absolute)
+(defun larumbe/buffer-expand-filenames (&optional absolute exp-dir)
   "Expands filenames paths present in `current-buffer' line by line.
 If ABSOLUTE is nil expand relative to `default-directory'.
-If ABSOLUTE is non-nil filenames will expand to their absolute paths."
+If ABSOLUTE is non-nil filenames will expand to their absolute paths.
+If EXP-DIR is non-nil, expand relative to this argument instead of `default-directory'."
   (interactive)
-  (let (cur-line)
+  (let ((cur-line)
+        (default-directory (if exp-dir
+                               exp-dir
+                             default-directory)))
     (save-excursion
       (goto-char (point-min))
       (while (< (point) (point-max))
