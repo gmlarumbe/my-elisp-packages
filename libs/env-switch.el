@@ -23,7 +23,7 @@
 ;;
 ;;; Code:
 
-(defvar env-switch-var-re "^\\(.*?\\)=\\(.*\\)")
+(defvar env-switch-var-re "^\\(?1:[_a-zA-Z0-9]+\\)=\\(?2:.*\\)")
 (defvar env-switch-fun-re "^\\(BASH_FUNC_\\)[a-z]+()=\\(.*\\)")
 
 (defvar larumbe/current-environment nil)
