@@ -291,6 +291,19 @@ If more than 2 args are required, use `f-join'"
       (message "Switched to US"))))
 
 
+;; Default font: Monospace Regular 11 (`F10/Options/SetDefaultFont')
+(defvar larumbe/current-font-size 11)
+
+;;;###autoload
+(defun larumbe/set-font-size (size)
+  "Set current font size among a list of possible values."
+  (interactive
+   (list (completing-read "Font size: " '("11" "12" "14"))))
+  (let ((font (concat "DejaVu Sans Mono-" size)))
+    (set-frame-font font t t)
+    (setq larumbe/current-font-size size)))
+
+
 
 ;;;; More complex/less frequently used
 ;;;###autoload

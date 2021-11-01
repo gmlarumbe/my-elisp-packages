@@ -34,7 +34,7 @@ since it needs to be set for the whole magit session, not only for the command."
 
 
 ;;;; Git
-;; Functions to operate on changed files of different branches: merge & checkout
+;;;;; Branch merging and checkout
 (defvar larumbe/git-branch-files-to-exclude-from-merge
       '(".bashrc"
         ".gitconfig"
@@ -114,6 +114,26 @@ Compares same file of revisions REVA and REVB using `magit-ediff-compare'"
     (setq changed-files (larumbe/git-exclude-files-before-ediff changed-files larumbe/git-branch-files-to-exclude-from-merge))
     ;; Last step would be to merge manually these files
     (larumbe/git-merge-all-files-between-branches rev-a rev-b changed-files)))
+
+
+
+
+;;;; Misc
+;;;###autoload
+(defun larumbe/git-pull-all-at-dir (dir)
+  "Update all the Git repos in DIR.
+Assumes DIR is formed only by directories and all of them are Git repos.
+Pulls on master branch."
+  (let ((git-repo-list (f-directories dir)))
+    (dolist (git-repo git-repo-list)
+      (async-shell-command (concat "cd " git-repo " && git checkout master && git pull")))))
+
+
+;;;###autoload
+(defun larumbe/update-repo-all-at-dir (dir)
+  (let ((repo-sandbox-list (f-directories dir)))
+    (dolist (repo-sandbox repo-sandbox-list)
+      (async-shell-command (concat "cd " repo-sandbox " && update_repo")))))
 
 
 
