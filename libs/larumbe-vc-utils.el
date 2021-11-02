@@ -136,6 +136,39 @@ Pulls on master branch."
       (async-shell-command (concat "cd " repo-sandbox " && update_repo")))))
 
 
+;;;###autoload
+(defun larumbe/git-check-dirty-repos (repos &optional buf)
+    "Show dirty repos/files of every repo in REPOS in *git-dirty* buffer.
+REPOS is assumed to be a list of strings containing the path of each repo.
+
+If optional variable BUF is set show output in BUF, otherwise in *git-dirty* buffer."
+    (interactive)
+    (unless (executable-find "git")
+      (error "Git is not installed!"))
+    (unless buf
+      (setq buf "*git-dirty*"))
+    (let ((shell-command-dont-erase-buffer t) ; Append output to buffer
+          (cmd))
+      (dolist (repo repos)
+        (message "Checking %s..." repo)
+        (setq cmd (concat "git -C " repo " update-index --refresh >> /dev/null || "
+                          "{ echo \"Repo " repo " has uncommitted changes!\" && git -C " repo " update-index --refresh; git -C " repo " diff-index --quiet HEAD --; echo \"\"; }"))
+        (shell-command cmd buf buf))
+      (pop-to-buffer buf)))
+
+
+
+(defvar larumbe/emacs-conf-repos (append '("~/.elisp" "~/.elisp_private")
+                                         (larumbe/straight-packages)))
+
+;;;###autoload
+(defun larumbe/emacs-check-dirty-repos ()
+  "Show dirty emacs-conf files in *emacs-dirty* buffer."
+  (interactive)
+  (larumbe/git-check-dirty-repos larumbe/emacs-conf-repos "*emacs-dirty*"))
+
+
+
 
 
 (provide 'larumbe-vc-utils)
