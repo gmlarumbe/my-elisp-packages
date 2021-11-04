@@ -169,6 +169,14 @@ If optional variable BUF is set show output in BUF, otherwise in *git-dirty* buf
 
 
 
+;;;###autoload
+(defun larumbe/set-vc-follow-symlinks ()
+  "Set interactively the value of `vc-follow-symlinks'."
+  (interactive)
+  (let ((value (completing-read "Set `vc-follow-symlinks' to: " '(yes no ask))))
+    (setq vc-follow-symlinks value)
+    (message "`vc-follow-symlinks' set to: %s" vc-follow-symlinks)))
+
 
 
 (provide 'larumbe-vc-utils)
