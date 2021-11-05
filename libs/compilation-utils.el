@@ -30,7 +30,7 @@
     (vivado-info2     "^\\(?1:^INFO:\\) "                                                         1   nil nil 0 nil)))
 
 ;; Leveraged from verilog-mode (verilog-IES: Incisive Enterprise Simulator) and extended for UVM
-(defvar larumbe/compilation-error-re-irun
+(defvar larumbe/compilation-error-re-xrun
   '((verilog-IES-fatal    "^[a-z]+: \\(?1:\\*F\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?2:[^ \t,]+\\),\\(?3:[0-9]+\\)\\)" 2 3 nil 2 nil (1 compilation-error-face))
     (verilog-IES-fatal2   "^[a-z]+: \\(?1:\\*F\\),[0-9A-Z]+: " 1 nil nil 2 nil)
     (verilog-IES-error    "^[a-z]+: \\(?1:\\*E\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?2:[^ \t,]+\\),\\(?3:[0-9]+\\)\\)" 2 3 nil 2 nil (1 compilation-error-face))
@@ -113,12 +113,12 @@
 (defvar larumbe/compilation-custom-regexp-sets
   '(("verilog-make" . (larumbe/compilation-error-re-iverilog larumbe/compilation-error-re-verilator larumbe/compilation-error-re-vivado))
     ("vivado"       . (larumbe/compilation-error-re-vivado))
-    ("irun"         . (larumbe/compilation-error-re-irun))
+    ("xrun"         . (larumbe/compilation-error-re-xrun))
     ("verilator"    . (larumbe/compilation-error-re-verilator))
     ("iverilog"     . (larumbe/compilation-error-re-iverilog))
     ("synopsys-dc"  . (larumbe/compilation-error-re-synopsys-dc))
-    ("scons"        . (larumbe/compilation-error-re-irun larumbe/compilation-error-re-vivado larumbe/compilation-error-re-scons larumbe/compilation-error-re-python))
-    ("pax"          . (larumbe/compilation-error-re-irun larumbe/compilation-error-re-pax larumbe/compilation-error-re-gcc))
+    ("scons"        . (larumbe/compilation-error-re-xrun larumbe/compilation-error-re-vivado larumbe/compilation-error-re-scons larumbe/compilation-error-re-python))
+    ("pax"          . (larumbe/compilation-error-re-xrun larumbe/compilation-error-re-pax larumbe/compilation-error-re-gcc))
     ("ableton"      . (larumbe/compilation-error-re-python larumbe/compilation-error-re-ableton))))
 
 (defvar larumbe/compilation-custom-regexp-active nil)
@@ -145,15 +145,11 @@
 
 
 ;;;###autoload
-(defun larumbe/compilation-show-buffer (&optional parser kill-wins)
+(defun larumbe/compilation-show-buffer (&optional parser)
   "Show custom compilation buffer.
-Set *compilation* buffer regexp-alist-alist to its corresponding PARSER regexp.
-If KILL-WINS is non-nil then delete every other window."
+Set *compilation* buffer regexp-alist-alist to its corresponding PARSER regexp."
   (interactive)
   (delete-other-windows)
-  (unless kill-wins
-    (split-window-below)
-    (other-window 1))
   (switch-to-buffer "*compilation*")
   (when parser
     (larumbe/compilation-error-re-set parser))

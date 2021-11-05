@@ -308,78 +308,172 @@ If UNIVERSAL-ARG is provided, then simulate as well."
     (larumbe/compilation-show-buffer "vivado")))
 
 
-;;;; Irun
-;; 1st) Make sure that Vivado simulation libraries have been exported with the `compile_simlib'
-;; command at vivado TCL console
-(defvar larumbe/irun-glbl-path          nil)
-(defvar larumbe/irun-vivado-simlib-path nil)
-(defvar larumbe/irun-projects           nil)
-(defvar larumbe/irun-sources-file       nil)
-(defvar larumbe/irun-top-module         nil)
-(defvar larumbe/irun-compilation-dir    nil)
-(defvar larumbe/irun-library-name       nil)
-(defvar larumbe/irun-uvm-test-name      nil)
-(defvar larumbe/irun-opts (concat "-64bit "
-                                  "-v93 "
-                                  "-relax "
-                                  "-access +rwc "
-                                  "-namemap_mixgen "
-                                  "-clean "
-                                  "-vlog_ext +.vh "))
+;;;; Xcelium
+;; Vivado IP simulation variables
+(defvar larumbe/xrun-vivado-installation-path     nil)
+(defvar larumbe/xrun-vivado-simlibs-compiled-path nil)
+(defvar larumbe/xrun-vivado-simlibs '(("unisims"  . "data/verilog/src/unisims")
+                                      ("unifast"  . "data/verilog/src/unisims")
+                                      ("unimacro" . "data/verilog/src/unisims")
+                                      ("retarget" . "data/verilog/src/retarget")
+                                      ("secureip" . "data/secureip")))
 
-;; Command built after according to previous variables
-(defvar larumbe/irun-command nil)
+;; Internal variables
+(defvar larumbe/xrun-library-name "defaultlib")
+(defvar larumbe/xrun-opts '("-64bit"
+                            "-v93"
+                            "-relax"
+                            "-access"
+                            "+rwc"
+                            "-namemap_mixgen"
+                            "-clean"
+                            "-vlog_ext"
+                            "+.vh"))
+(defvar larumbe/xrun-command nil) ; Command built upon previous variables
 
-
-(defun larumbe/irun-vivado-build-simlib-args ()
-  "Build Vivado simlib args for use in compilation functions."
-  (concat "-reflib " larumbe/irun-vivado-simlib-path "/unisim:unisim "
-          "-reflib " larumbe/irun-vivado-simlib-path "/unisims_ver:unisims_ver "
-          "-reflib " larumbe/irun-vivado-simlib-path "/secureip:secureip "
-          "-reflib " larumbe/irun-vivado-simlib-path "/unimacro:unimacro "
-          "-reflib " larumbe/irun-vivado-simlib-path "/unimacro_ver:unimacro_ver "))
-
-
-(defun larumbe/irun-build-command ()
-  "Irun build command."
-  (let (uvm-args)
-    (when larumbe/irun-uvm-test-name
-      (setq uvm-args (concat "-uvm +UVM_TESTNAME=" larumbe/irun-uvm-test-name)))
-    (concat "irun "
-            larumbe/irun-opts
-            (larumbe/irun-vivado-build-simlib-args)
-            "-f " larumbe/irun-sources-file " "
-            "-top " larumbe/irun-library-name "." larumbe/irun-top-module " "
-            "-top glbl " larumbe/irun-glbl-path " " uvm-args)))
+;; Variables to be set by the user
+(defvar larumbe/xrun-projects           nil)
+(defvar larumbe/xrun-sources-file       nil)
+(defvar larumbe/xrun-top-module         nil)
+(defvar larumbe/xrun-extra-args-file    nil)
+(defvar larumbe/xrun-uvm-test-name      nil)
+(defvar larumbe/xrun-vivado-use-reflibs nil)
 
 
-(defun larumbe/irun-set-active-project ()
-  "Set active project based on `larumbe/irun-projects'."
-  (let (irun-project files-list)
-    (setq irun-project (completing-read "Select project: " (mapcar 'car larumbe/irun-projects)))
-    (setq files-list (cdr (assoc irun-project larumbe/irun-projects)))
-    (setq larumbe/irun-sources-file    (nth 0 files-list))
-    (setq larumbe/irun-top-module      (nth 1 files-list))
-    (setq larumbe/irun-compilation-dir (nth 2 files-list))
-    (setq larumbe/irun-library-name    (nth 3 files-list))
-    (setq larumbe/irun-uvm-test-name   (nth 4 files-list))
-    (setq larumbe/irun-command (larumbe/irun-build-command))))
+(defun larumbe/xrun-vivado-libs ()
+  "Return list of strings with names of Vivado simlibs."
+  (mapcar #'car larumbe/xrun-vivado-simlibs))
+
+
+(defun larumbe/xrun-vivado-simlib-reflib-args ()
+  "Return precompiled Vivado reflib simlib args."
+  (mapconcat (lambda (lib) (concat "-reflib " (larumbe/path-join larumbe/xrun-vivado-simlibs-compiled-path lib ) ":" lib))
+             (larumbe/xrun-vivado-libs)
+             " "))
+
+
+(defun larumbe/xrun-file-list ()
+  "Return string to create library for files of current project."
+  (let (files)
+    (with-temp-buffer
+      (insert-file-contents larumbe/xrun-sources-file)
+      (setq files (split-string (buffer-substring (point-min) (point-max)) "\n"))
+      (setq files (mapconcat #'identity files " ")))
+    (concat "-makelib " larumbe/xrun-library-name " " files "-endlib")))
+
+
+(defun larumbe/xrun-vivado-glbl-path ()
+  "Return path of glbl.v file."
+  (concat (larumbe/path-join larumbe/xrun-vivado-installation-path "data/verilog/src/glbl.v")))
+
+
+(defun larumbe/xrun-compilation-dir ()
+  "Return path of current project compilation directory.
+Defaults to `build' at project root directory, where files.f should be placed."
+  (concat (file-name-directory larumbe/xrun-sources-file) "build"))
+
+
+(defun larumbe/xrun-build-command ()
+  "Xrun build command."
+  (let (extra-args-file uvm-args vivado-args)
+    ;; Optional/extra args
+    (when larumbe/xrun-extra-args-file
+      (setq extra-args-file (concat " -f " larumbe/xrun-extra-args-file)))
+    (when larumbe/xrun-uvm-test-name
+      (setq uvm-args (concat " -uvm +UVM_TESTNAME=" larumbe/xrun-uvm-test-name)))
+    (when larumbe/xrun-vivado-use-reflibs
+      (setq vivado-args (concat " " (larumbe/xrun-vivado-simlib-reflib-args))))
+    ;; Build command
+    (concat "xrun "
+            (mapconcat #'identity larumbe/xrun-opts " ")                   " "
+            (larumbe/xrun-file-list)                                       " "
+            "-top " larumbe/xrun-library-name "." larumbe/xrun-top-module  " "
+            "-top glbl " (larumbe/xrun-vivado-glbl-path)
+            uvm-args
+            extra-args-file
+            vivado-args)))
+
+
+(defun larumbe/xrun-set-active-project ()
+  "Set active project based on `larumbe/xrun-projects'."
+  (let (xrun-project files-list)
+    (setq xrun-project (completing-read "Select project: " (mapcar #'car larumbe/xrun-projects)))
+    (setq files-list (cdr (assoc xrun-project larumbe/xrun-projects)))
+    (setq larumbe/xrun-sources-file       (nth 0 files-list))
+    (setq larumbe/xrun-top-module         (nth 1 files-list))
+    (setq larumbe/xrun-extra-args-file    (nth 2 files-list))
+    (setq larumbe/xrun-uvm-test-name      (nth 3 files-list))
+    (setq larumbe/xrun-vivado-use-reflibs (nth 4 files-list))
+    (setq larumbe/xrun-command (larumbe/xrun-build-command))))
+
+
+;;;###autoload
+(defun larumbe/xrun-compile-vivado-simlib (lib)
+  "Compile a simlib of the ones available in `larumbe/xrun-vivado-simlibs'
+at `larumbe/xrun-vivado-simlibs-compiled-path'."
+  (interactive
+   (list (completing-read "Library: " (larumbe/xrun-vivado-libs))))
+  ;; Check for wrong input
+  (unless (member lib (larumbe/xrun-vivado-libs))
+    (error "Library value: %s not allowed" lib))
+  (make-directory larumbe/xrun-vivado-simlibs-compiled-path t)
+  (let ((vivado-lib-path (cdr (assoc lib larumbe/xrun-vivado-simlibs)))
+        (lib-files)
+        (cmd-lib-args)
+        (cmd))
+    ;; Get files and libraries
+    (setq vivado-lib-path (cdr (assoc lib larumbe/xrun-vivado-simlibs)))
+    (if (string= lib "secureip")
+        (setq lib-files (delete "." (delete ".." (directory-files-recursively (larumbe/path-join larumbe/xrun-vivado-installation-path vivado-lib-path) "\\.vp$"))))
+      (setq lib-files (delete "." (delete ".." (directory-files (larumbe/path-join larumbe/xrun-vivado-installation-path vivado-lib-path) t "\\.[s]?v[h]?$")))))
+    (setq lib-files (mapconcat #'identity lib-files " "))
+    (setq cmd-lib-args (concat cmd-lib-args
+                               "-makelib "
+                               (larumbe/path-join larumbe/xrun-vivado-simlibs-compiled-path lib) " "
+                               lib-files " "
+                               "-endlib "))
+    ;; Build command
+    (setq cmd (concat "xrun -compile "
+                      (mapconcat #'identity larumbe/xrun-opts " ") " "
+                      cmd-lib-args))
+    ;; Compile
+    (set (make-local-variable 'compile-command) cmd)
+    (compile (concat "cd " larumbe/xrun-vivado-simlibs-compiled-path " && " compile-command))
+    (larumbe/compilation-show-buffer "xrun")))
+
+
+;;;###autoload
+(defun larumbe/xrun-compile-vivado-simlib-all ()
+  "Compile all the simlibs.
+
+After running it, do not kill buffer and start next compilation
+until previous has finished.
+
+INFO: Since it is based on the compile command, it is not possible
+to have more than one compilation at a time with the same buffer name.
+
+When tried to compile all the libs in one command there was a bash
+error saying that argument list was too long due to high amount of files."
+  (interactive)
+  (dolist (lib (larumbe/xrun-vivado-libs))
+    (larumbe/xrun-compile-vivado-simlib lib)))
 
 
 
 ;;;###autoload
-(defun larumbe/irun-sim-elab (&optional universal-arg)
-  "Simulate a design with `irun' after selecting project.
+(defun larumbe/xrun-sim-elab (&optional universal-arg)
+  "Simulate a design with `xrun' after selecting project.
 If UNIVERSAL-ARG is given, elaborate the design instead."
   (interactive "P")
   (let (cmd)
-    (larumbe/irun-set-active-project)
+    (larumbe/xrun-set-active-project)
     (if universal-arg
-        (setq cmd (concat larumbe/irun-command " -elaborate"))
-      (setq cmd larumbe/irun-command))
+        (setq cmd (concat larumbe/xrun-command " -elaborate"))
+      (setq cmd larumbe/xrun-command))
     (set (make-local-variable 'compile-command) cmd)
-    (compile (concat "cd " larumbe/irun-compilation-dir " && " compile-command))
-    (larumbe/compilation-show-buffer "irun")))
+    (make-directory (larumbe/xrun-compilation-dir) t)
+    (compile (concat "cd " (larumbe/xrun-compilation-dir) " && " compile-command))
+    (larumbe/compilation-show-buffer "xrun")))
 
 
 
