@@ -312,7 +312,6 @@ If more than 2 args are required, use `f-join'"
 If ABSOLUTE is nil expand relative to `default-directory'.
 If ABSOLUTE is non-nil filenames will expand to their absolute paths.
 If EXP-DIR is non-nil, expand relative to this argument instead of `default-directory'."
-  (interactive)
   (let ((cur-line)
         (default-directory (if exp-dir
                                exp-dir
@@ -337,7 +336,7 @@ For example, in SystemVerilog, packages might need to be included before other f
   (interactive)
   (let ((sorted-files-p nil))
     (goto-char (point-min))
-    (unless sorted-files-p
+    (while (not sorted-files-p)
       (save-excursion
         (unless (search-forward-regexp regexp nil 1)
           (setq sorted-files-p t))
