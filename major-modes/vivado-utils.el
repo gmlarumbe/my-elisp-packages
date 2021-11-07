@@ -1,19 +1,22 @@
 ;;; vivado-utils.el --- Vivado Utils  -*- lexical-binding: t -*-
 ;;; Commentary:
-;; This package includes one minor mode to add auto completion to a Vivado TCL comint shell,
+;;
+;; This package includes one minor mode to add auto completion to a Vivado comint shell,
 ;; and a major mode to edit Vivado XDC files (tcl mode derived)
-;;
-;; TCL shell depends on compilation-settings.el `larumbe/shell-compilation-regexp-interactive' function,
-;; and on the compilation regexps association lists defined there.
-;;
-;; Therefore, in the future it could be packaged as a single file, with proper (require) dependencies.
 ;;
 ;;; Code:
 
+(require 'comint)
+(require 'company)
+(require 'compilation-utils)
 
-;;; Vivado-TCL Shell
-(defvar larumbe/vivado-tcl-shell-buffer "*vivado-tcl*")
-(defvar larumbe/vivado-tcl-commands '(
+
+;;;; Vivado-TCL Shell
+(defvar larumbe/vivado-shell-bin (executable-find "vivado"))
+(defvar larumbe/vivado-shell-cmd-switches '("-mode" "tcl" "-nojournal" "-nolog"))
+
+(defvar larumbe/vivado-shell-buffer "*vivado-tcl*")
+(defvar larumbe/vivado-shell-commands '(
        ;; UG835 Xilinx words converted to text via `pdftotext'
 
        ;; Board:
@@ -443,14 +446,14 @@
   (let* ((b (save-excursion (skip-chars-backward "a-zA-Z0-9_") (point)))
          (e (save-excursion (skip-chars-forward "a-zA-Z0-9_") (point)))
          (str (buffer-substring b e))
-         (allcomp (all-completions str larumbe/vivado-tcl-commands)))
+         (allcomp (all-completions str larumbe/vivado-shell-commands)))
     (list b e allcomp)))
 
 
 (defun larumbe/vivado-shell-send-exit-command ()
-  (interactive)
   "Send 'exit' command to quit Vivado console."
-  (let ((proc (get-buffer-process larumbe/vivado-tcl-shell-buffer)))
+  (interactive)
+  (let ((proc (get-buffer-process larumbe/vivado-shell-buffer)))
     (comint-send-string proc "exit")
     (comint-send-string proc "\n")))
 
@@ -460,7 +463,7 @@
 Autocompletion based on `vivado' package keywords. "
   :keymap
   '(("\C-d" . larumbe/vivado-shell-send-exit-command)) ; Should override `comint-delchar-or-maybe-eof'
-  (when (not (equal (buffer-name (current-buffer)) larumbe/vivado-tcl-shell-buffer))
+  (when (not (equal (buffer-name (current-buffer)) larumbe/vivado-shell-buffer))
     (error "Not in Vivado shell buffer!"))
   (make-local-variable 'comint-dynamic-complete-functions) ; Use this variable instead of `completion-at-point-functions' to preserve file-name expansion
   (if larumbe/vivado-shell-completion-at-point-mode
@@ -470,15 +473,21 @@ Autocompletion based on `vivado' package keywords. "
     (delete #'larumbe/vivado-shell-completion-at-point comint-dynamic-complete-functions)))
 
 
-;; Fake TCL Shell based on compilation/comint modes to allow for regexps
-;; Advantages over `inferior-tcl': Can parse Regexps
-;; Drawbacks over `inferior-tcl': Requires custom function to send lines/regions from a .tcl buffer
-;;   - This would be previous function :)
+;;;###autoload
 (defun larumbe/vivado-shell ()
-  "Invoke a TCL vivado shell with the proper regexps, suited for compilation"
+  "Invoke a TCL vivado shell with the proper regexps, suited for compilation.
+
+Fake TCL Shell based on compilation/comint modes to allow for regexps.
+Advantages over `inferior-tcl':
+ - Can parse Regexps
+Drawbacks over `inferior-tcl':
+ - Requires custom function to send lines/regions from a .tcl buffer:
+`larumbe/vivado-shell-tcl-send-line-or-region-and-step'."
   (interactive)
-  (let ((command (concat tcl-application " " (mapconcat 'identity tcl-command-switches " ")))
-        (bufname larumbe/vivado-tcl-shell-buffer)
+  (unless larumbe/vivado-shell-bin
+    (error "Could not find vivado in $PATH.  Add it or set `larumbe/vivado-shell-bin'"))
+  (let ((command (concat larumbe/vivado-shell-bin " " (mapconcat #'identity larumbe/vivado-shell-cmd-switches " ")))
+        (bufname larumbe/vivado-shell-buffer)
         (parser  "vivado"))
     (larumbe/compilation-interactive command bufname parser)
     (larumbe/vivado-shell-completion-at-point-mode 1)
@@ -490,7 +499,7 @@ Autocompletion based on `vivado' package keywords. "
   "Send the current line to the inferior shell and step to the next line.
 When the region is active, send the region instead."
   (interactive)
-  (let (from to end (proc (get-buffer-process larumbe/vivado-tcl-shell-buffer)))
+  (let (from to end (proc (get-buffer-process larumbe/vivado-shell-buffer)))
     (if (use-region-p)
         (setq from (region-beginning)
               to (region-end)
@@ -504,10 +513,9 @@ When the region is active, send the region instead."
 
 
 
-;;; Vivado XDC
-(defvar larumbe/vivado-tcl-xdc-commands
-      '(
-        ;; Fetched from `larumbe/vivado-tcl-commands' XDC commands
+;;;; Vivado XDC
+(defvar larumbe/vivado-xdc-commands
+      '(;; Fetched from `larumbe/vivado-shell-commands' XDC commands
         "add_cells_to_pblock"          "all_clocks"                    "all_cpus"
         "all_dsps"                     "all_fanin"                     "all_fanout"
         "all_ffs"                      "all_hsios"                     "all_inputs"
@@ -543,17 +551,15 @@ When the region is active, send the region instead."
         ))
 
 
-(defvar larumbe/vivado-tcl-xdc-properties
-      '(
-        "CLOCK_DEDICATED_ROUTE" "IOSTANDARD" "DRIVE" "DIFF_TERM" "VCCAUX_IO" "SLEW" "FAST" "DCI_CASCADE"
+(defvar larumbe/vivado-xdc-properties
+      '("CLOCK_DEDICATED_ROUTE" "IOSTANDARD" "DRIVE" "DIFF_TERM" "VCCAUX_IO" "SLEW" "FAST" "DCI_CASCADE"
         "PACKAGE_PIN" "IOB" "LOC"
         "PROHIBIT"
         "BITSTREAM.CONFIG.UNUSEDPIN" "BITSTREAM.GENERAL.COMPRESS" ; Add more options...
         ))
 
-(defvar larumbe/vivado-tcl-xdc-switches
-      '(
-        "name" "period" "clock" "through" "filter" "hierarchical" "hier" "fall_from" "rise_from" "add_delay"
+(defvar larumbe/vivado-xdc-switches
+      '("name" "period" "clock" "through" "filter" "hierarchical" "hier" "fall_from" "rise_from" "add_delay"
         "max" "min" "rise_to" "fall_to" "of_objects" "from" "to" "setup" "hold" "end" "start" "of" "group"
         "physically_exclusive" "asynchronous" "min" "rise_to" "fall_to" "of_objects" "from" "to" "setup" "hold" "of" "group" "asynchronous"
         "include_generated_clocks" "primitive_group" "pppasynchronous"
@@ -561,32 +567,33 @@ When the region is active, send the region instead."
         ))
 
 
-(defvar larumbe/vivado-tcl-xdc-commands-font-lock   (regexp-opt larumbe/vivado-tcl-xdc-commands 'symbols))
-(defvar larumbe/vivado-tcl-xdc-properties-font-lock (regexp-opt larumbe/vivado-tcl-xdc-properties 'symbols))
-(defvar larumbe/vivado-tcl-xdc-switches-font-lock   (concat "-" (regexp-opt larumbe/vivado-tcl-xdc-switches 'symbols)))
+(defvar larumbe/vivado-xdc-commands-font-lock   (regexp-opt larumbe/vivado-xdc-commands 'symbols))
+(defvar larumbe/vivado-xdc-properties-font-lock (regexp-opt larumbe/vivado-xdc-properties 'symbols))
+(defvar larumbe/vivado-xdc-switches-font-lock   (concat "-" (regexp-opt larumbe/vivado-xdc-switches 'symbols)))
 
 
-(defvar larumbe/vivado-tcl-xdc-font-lock
+(defvar larumbe/vivado-xdc-font-lock
       (list
-       (list larumbe/vivado-tcl-xdc-commands-font-lock   0 font-lock-keyword-face)
-       (list larumbe/vivado-tcl-xdc-properties-font-lock 0 font-lock-constant-face)
-       (list larumbe/vivado-tcl-xdc-switches-font-lock   0 font-lock-constant-face)
+       (list larumbe/vivado-xdc-commands-font-lock   0 font-lock-keyword-face)
+       (list larumbe/vivado-xdc-properties-font-lock 0 font-lock-constant-face)
+       (list larumbe/vivado-xdc-switches-font-lock   0 font-lock-constant-face)
        ))
 
 
-(defun larumbe/vivado-tcl-xdc-completion-at-point ()
+(defun larumbe/vivado-xdc-completion-at-point ()
   "Used as an element of `completion-at-point-functions'."
   (let* ((b (save-excursion (skip-chars-backward "a-zA-Z0-9_") (point)))
          (e (save-excursion (skip-chars-forward "a-zA-Z0-9_") (point)))
          (str (buffer-substring b e))
-         (allcomp (all-completions str larumbe/vivado-tcl-xdc-commands)))
+         (allcomp (all-completions str larumbe/vivado-xdc-commands)))
     (list b e allcomp)))
 
 
-(define-derived-mode vivado-xdc-mode tcl-mode
-  (font-lock-add-keywords 'vivado-xdc-mode larumbe/vivado-tcl-xdc-font-lock) ; Modified to preserve tcl-keywords
+;;;###autoload
+(define-derived-mode larumbe/vivado-xdc-mode tcl-mode
+  (font-lock-add-keywords 'larumbe/vivado-xdc-mode larumbe/vivado-xdc-font-lock) ; Modified to preserve tcl-keywords
   (make-local-variable 'completion-at-point-functions)
-  (add-to-list 'completion-at-point-functions 'larumbe/vivado-tcl-xdc-completion-at-point)
+  (add-to-list 'completion-at-point-functions 'larumbe/vivado-xdc-completion-at-point)
   (setq mode-name "XDC"))
 
 

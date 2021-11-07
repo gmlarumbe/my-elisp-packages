@@ -1,24 +1,28 @@
 ;;; unison-sync-minor-mode.el --- Unison Sync Minor mode  -*- lexical-binding: t -*-
 ;;; Commentary:
-;;; Code:
-
+;;
 ;;;; Basic info
+;;
 ;; Minor Mode created by Larumbe for Local/Remote unison synchronization
 ;; Fetched from: http://nullprogram.com/blog/2013/02/06/
 ;;
 ;; By default, every time a file is visited again, unison-sync-minor-mode will be disabled
 ;; Therefore, it must be enabled manually (no shortcut) and the first synchronization
-;; requires selecting a profile available at '~/.unison/'.
+;; requires selecting a profile available at '~/.unison/prf/'
+;;
 ;; Do not forget to SYNC manually at the beginning with the `unison-manually-sync-projects'!!!
 ;;
 ;;;; Merging with unison:
+;;
 ;; Merging was very tricky to set up since emacsclient coordination with server required 'unison' to wait for emacsclient's merge.
 ;; Afterwards unison would update both sides. However, if the merge option uses only emacsclient --eval parameters, it returns immediately (before merge has been done) and unison triggers and error.
 ;; Using 'emacsclient -c' option makes unison wait for emacs, but (maybe because of EXWM) after killing that new frame no finish signal is sent back to unison.
 ;; Therefore, the only workaround is to make a script that waits until merge file is created/updated after ediff and then synchronized.
+;;
 ;; INFO: https://superuser.com/questions/81958/how-to-make-emacsclient-wait-when-using-the-eval-option/81980
 ;;
 ;;;; Integration with EXWM
+;;
 ;; Be careful to override unison-run command to use start-process instead of EXWM blocking shell-command.
 ;;
 ;;; Code
@@ -28,20 +32,20 @@
 (make-variable-buffer-local (defvar unison-active-profile nil))
 (defvar larumbe/unison-show-process-window nil)
 (defvar larumbe/unison-sync-hook-active nil)
-(defvar larumbe/unison-folder "/home/martigon/.unison/")
+(defvar larumbe/unison-folder "~/.unison/")
 (defvar larumbe/unison-buffer "*unison*")
 (defvar larumbe/unison-command-name "unison")
 
 
 (defun unison-set-active-profile ()
-  "Set active profile after checking availability at previously set unison folder"
+  "Set active profile after checking availability at previously set unison folder."
   (interactive)
   (setq unison-active-profile (completing-read "Select profile: " (directory-files larumbe/unison-folder nil ".*\.prf$"))))
 
 
 ;;;; Aux functions
 (defun unison-toggle-enable-process-window ()
-  "Toggle activation of process window when running Unison"
+  "Toggle activation of process window when running Unison."
   (interactive)
   (if (not (bound-and-true-p larumbe/unison-show-process-window))
       (progn
@@ -52,16 +56,16 @@
 
 
 (defun unison-show-process-window ()
-  "Show unison buffer in a window to check sync progress"
+  "Show unison buffer in a window to check sync progress."
   (interactive)
   (popwin:pop-to-buffer larumbe/unison-buffer t)
   (view-mode t)
   (setq truncate-lines t)
-  (end-of-buffer))
+  (goto-char (point-max)))
 
 
 (defun unison-pop-show-unison-buffer ()
-  "Pop to unison buffer if not visible, and select it if visible"
+  "Pop to unison buffer if not visible, and select it if visible."
   (interactive)
   (if (not (get-buffer-window larumbe/unison-buffer))
       (progn
@@ -69,11 +73,11 @@
         (enlarge-window 10)
         (view-mode t)
         (setq truncate-lines t)
-        (end-of-buffer))
+        (goto-char (point-max)))
     (select-window (get-buffer-window larumbe/unison-buffer))
     (view-mode t)
     (setq truncate-lines t)
-    (end-of-buffer)))
+    (goto-char (point-max))))
 
 
 (defun unison-sentinel-finished (process signal)
@@ -95,7 +99,7 @@ Otherwise, it will depend on buffer local selected profile."
   (interactive)
   (let (proc)
     (when (string-equal (file-name-extension (buffer-file-name)) "prf")
-      (setq unison-active-profile (file-relative-name (buffer-file-name))))
+      (setq unison-active-profile (file-name-sans-extension (file-relative-name (buffer-file-name)))))
     (unless (bound-and-true-p unison-active-profile)
       (unison-set-active-profile))
     (setq proc (start-process larumbe/unison-buffer larumbe/unison-buffer larumbe/unison-command-name unison-active-profile "-auto" "-batch"))
@@ -106,9 +110,15 @@ Otherwise, it will depend on buffer local selected profile."
 
 
 (defun unison-manually-sync-projects (&optional prompt)
-  "Sometimes, when files are identical but have different timestamps/permissions unison will detect it and will skip them.
+  "Manually sync unison projects.
+
+Sometimes, when files are identical but have different timestamps/permissions
+unison will detect it and will skip them.
 Manually sync them will allow for a proper output at unison buffer.
-User will have to choose which of the repos has priority on the synchronization"
+
+User will have to choose which of the repos has priority on the synchronization.
+
+To explictly ask for confirmation use universal arg PROMPT."
   (interactive "P")
   (unless (bound-and-true-p unison-active-profile)
     (setq unison-active-profile (file-name-nondirectory (buffer-file-name))))
@@ -118,12 +128,12 @@ User will have to choose which of the repos has priority on the synchronization"
       (find-file (concat larumbe/unison-folder unison-active-profile))
       (switch-to-buffer unison-active-profile)
       ;; Get Local
-      (beginning-of-buffer)
+      (goto-char (point-min))
       (re-search-forward "^root=/home")
       (backward-char 5)
       (setq local (buffer-substring (point) (progn (end-of-line) (point))))
       ;; Get remote
-      (beginning-of-buffer)
+      (goto-char (point-min))
       (re-search-forward "^root=ssh://")
       (backward-char 6)
       (setq remote (thing-at-point 'url t))
@@ -144,7 +154,7 @@ User will have to choose which of the repos has priority on the synchronization"
 ;; /usr/share/emacs/25.1/lisp/international/mule.el.gz:1520
 ;; FIXME: It did not work to use this function at the end of `unison-my-run' to automate it more
 (defun set-unison-process-coding-system (&optional silent)
-  "Set coding systems for the unison buffer"
+  "Set coding systems for the unison buffer."
   (interactive)
   (let ((proc (get-buffer-process larumbe/unison-buffer))
         (decoding 'utf-8)
@@ -159,11 +169,6 @@ User will have to choose which of the repos has priority on the synchronization"
   (force-mode-line-update))
 
 
-;; Fetched from: https://stackoverflow.com/questions/6138029/how-to-add-a-hook-to-only-run-in-a-particular-mode
-(defun unison-sync-save-hook ()
-  (unison-my-run))
-
-
 ;; TODO: Still does not work properly...
 ;; This function properly adds/clears hooks on unison-sync-minor-mode-hook
 ;; It also adds/clears hooks on after-save-hook with the C-c C-s keyshortcut
@@ -173,23 +178,12 @@ User will have to choose which of the repos has priority on the synchronization"
   (interactive)
   (if larumbe/unison-sync-hook-active
       (progn
-        (remove-hook 'after-save-hook 'unison-sync-save-hook)
-        ;; (remove-hook 'write-file-functions 'unison-sync-save-hook)
-        (remove-hook 'unison-sync-minor-mode-hook
-                     (lambda ()
-                       (add-hook 'after-save-hook 'unison-sync-save-hook nil 'make-it-local)))
-        ;; (remove-hook 'unison-sync-minor-mode-hook
-        ;;              (lambda ()
-        ;;                (add-hook 'write-file-functions 'unison-sync-save-hook nil 'make-it-local)))
+        (remove-hook 'after-save-hook #'unison-my-run)
+        (remove-hook 'unison-sync-minor-mode-hook (lambda () (add-hook 'after-save-hook #'unison-my-run nil 'make-it-local)))
         (setq larumbe/unison-sync-hook-active nil)
         (message "Unison save-sync disabled..."))
     ;; Not active
-    (add-hook 'unison-sync-minor-mode-hook
-              (lambda ()
-                (add-hook 'after-save-hook 'unison-sync-save-hook nil 'make-it-local)))
-    ;; (add-hook 'unison-sync-minor-mode-hook
-    ;;           (lambda ()
-    ;;             (add-hook 'write-file-functions 'unison-sync-save-hook nil 'make-it-local)))
+    (add-hook 'unison-sync-minor-mode-hook (lambda () (add-hook 'after-save-hook #'unison-my-run nil 'make-it-local)))
     (setq larumbe/unison-sync-hook-active t)
     (message "Unison save-sync enabled!")))
 
@@ -202,8 +196,7 @@ User will have to choose which of the repos has priority on the synchronization"
   "Frontend for unison synchronization between machines."
   :lighter " [U]"
   :keymap
-  '(
-    ;; ("\C-c\C-s" . unison-toggle-sync-save-hook)
+  '(("\C-c\C-s" . unison-toggle-sync-save-hook)
     ("\C-c\C-c" . unison-my-run)
     ("\C-c\C-v" . unison-toggle-enable-process-window)
     ("\C-c\C-b" . unison-pop-show-unison-buffer)

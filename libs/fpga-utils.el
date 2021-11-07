@@ -397,8 +397,9 @@ Defaults to `build' at project root directory, where files.f should be placed."
 
 ;;;###autoload
 (defun larumbe/xrun-compile-vivado-simlib (lib)
-  "Compile a simlib of the ones available in `larumbe/xrun-vivado-simlibs'
-at `larumbe/xrun-vivado-simlibs-compiled-path'."
+  "Compile a LIB of the ones available in `larumbe/xrun-vivado-simlibs'.
+
+LIB will be compiled at `larumbe/xrun-vivado-simlibs-compiled-path'."
   (interactive
    (list (completing-read "Library: " (larumbe/xrun-vivado-libs))))
   ;; Check for wrong input

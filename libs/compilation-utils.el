@@ -129,7 +129,7 @@
 ;;;; Functions
 ;;;###autoload
 (defun larumbe/compilation-error-re-set (parser)
-  "Sets variables `compilation-error-regexp-alist' and `compilation-error-regexp-alist-alist' according to PARSER."
+  "Set variables `compilation-error-regexp-alist' and `compilation-error-regexp-alist-alist' according to PARSER."
   (interactive (list (completing-read "Select parser: " (mapcar 'car larumbe/compilation-custom-regexp-sets))))
   (let* ((regex-alist-quoted (cdr (assoc parser larumbe/compilation-custom-regexp-sets)))
          (regex-alist (apply 'append (mapcar
