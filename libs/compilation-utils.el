@@ -31,14 +31,14 @@
 
 ;; Leveraged from verilog-mode (verilog-IES: Incisive Enterprise Simulator) and extended for UVM
 (defvar larumbe/compilation-error-re-xrun
-  '((verilog-IES-fatal    "^[a-z]+: \\(?1:\\*F\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?2:[^ \t,]+\\),\\(?3:[0-9]+\\)\\)" 2 3 nil 2 nil (1 compilation-error-face))
-    (verilog-IES-fatal2   "^[a-z]+: \\(?1:\\*F\\),[0-9A-Z]+: " 1 nil nil 2 nil)
-    (verilog-IES-error    "^[a-z]+: \\(?1:\\*E\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?2:[^ \t,]+\\),\\(?3:[0-9]+\\)\\)" 2 3 nil 2 nil (1 compilation-error-face))
-    (verilog-IES-error2   "^[a-z]+: \\(?1:\\*E\\),[0-9A-Z]+: " 1 nil nil 2 nil)
-    (verilog-IES-warning  "^[a-z]+: \\(?1:\\*W\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?2:[^ \t,]+\\),\\(?3:[0-9]+\\)\\)" 2 3 nil 1 nil (1 compilation-warning-face))
-    (verilog-IES-warning2 "^[a-z]+: \\(?1:\\*W\\),[0-9A-Z]+: " 1 nil nil 1 nil)
-    (verilog-IES-note     "^[a-z]+: \\(?1:\\*N\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?2:[^ \t,]+\\),\\(?3:[0-9]+\\)\\)" 2 3 nil 0 nil (1 compilation-info-face))
-    (verilog-IES-note2    "^[a-z]+: \\(?1:\\*N\\),[0-9A-Z]+: " 1 nil nil 0 nil)
+  '((xrun-fatal    "^[a-z]+: \\(?1:\\*F\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?2:[^ \t,]+\\),\\(?3:[0-9]+\\)\\)" 2 3 nil 2 nil (1 compilation-error-face))
+    (xrun-fatal2   "^[a-z]+: \\(?1:\\*F\\),[0-9A-Z]+: " 1 nil nil 2 nil)
+    (xrun-error    "^[a-z]+: \\(?1:\\*E\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?2:[^ \t,]+\\),\\(?3:[0-9]+\\)\\)" 2 3 nil 2 nil (1 compilation-error-face))
+    (xrun-error2   "^[a-z]+: \\(?1:\\*E\\),[0-9A-Z]+: " 1 nil nil 2 nil)
+    (xrun-warning  "^[a-z]+: \\(?1:\\*W\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?2:[^ \t,]+\\),\\(?3:[0-9]+\\)\\)" 2 3 nil 1 nil (1 compilation-warning-face))
+    (xrun-warning2 "^[a-z]+: \\(?1:\\*W\\),[0-9A-Z]+: " 1 nil nil 1 nil)
+    (xrun-note     "^[a-z]+: \\(?1:\\*N\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?2:[^ \t,]+\\),\\(?3:[0-9]+\\)\\)" 2 3 nil 0 nil (1 compilation-info-face))
+    (xrun-note2    "^[a-z]+: \\(?1:\\*N\\),[0-9A-Z]+: " 1 nil nil 0 nil)
     ;; UVM
     (uvm-fatal    "^\\(?1:UVM_FATAL\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"   2 3 nil 2 nil (1 compilation-error-face))
     (uvm-fatal2   "^\\(?1:UVM_FATAL\\) @"   nil nil nil 2 nil (1 compilation-error-face))

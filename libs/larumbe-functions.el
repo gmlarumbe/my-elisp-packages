@@ -304,6 +304,19 @@ If more than 2 args are required, use `f-join'"
     (setq larumbe/current-font-size size)))
 
 
+;;;###autoload
+(defun larumbe/flycheck-eldoc-toggle ()
+  "Disable `eldoc-mode' when enabling `flycheck-mode' to avoid minibuffer conflicts."
+  (interactive)
+  (if eldoc-mode
+      (progn
+        (eldoc-mode -1)
+        (flycheck-mode 1)
+        (message "Flycheck enabled"))
+    (eldoc-mode 1)
+    (flycheck-mode -1)
+    (message "Flycheck disabled")))
+
 
 ;;;; More complex/less frequently used
 ;;;###autoload
