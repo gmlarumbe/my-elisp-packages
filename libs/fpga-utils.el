@@ -261,13 +261,14 @@ Similar to `larumbe/fpga-tags-files-from-source-files-tcl-get-files-vivado'."
 Ask for used technology. Depending on this parameter, a different
 function to parse source_files and extract gtags.files is used.
 Defaults to Xilinx Vivado."
-  (interactive "P")
+  (interactive)
   (let* ((dir         (projectile-project-root))
          (syn-tgt-dir (larumbe/path-join dir "syn_targets"))
-         (technology  (completing-read "Tech: " '("Xilinx" "Lattice")))
+         (technology)
          (sources-file))
     (unless (file-exists-p syn-tgt-dir)
       (error "No syn_targets for current project!"))
+    (setq technology (completing-read "Tech: " '("Xilinx" "Lattice")))
     (setq sources-file (read-file-name "source_files.tcl path: " syn-tgt-dir))
     (pcase technology
       ("Xilinx"  (larumbe/fpga-tags-files-from-source-files-tcl-get-files-xilinx  sources-file dir))
