@@ -202,8 +202,8 @@ Based on a search from `files_and_libraries.tcl' file."
 
 
 ;;;; source_files.tcl tags
-(defun larumbe/fpga-tags-files-from-source-files-tcl-get-files (file dir)
-  "Create gtags.files from FILE `source_files.tcl'.
+(defun larumbe/fpga-tags-files-from-source-files-tcl-get-files-xilinx (file dir)
+  "Create gtags.files from FILE `source_files.tcl' for Vivado projects.
 
 INFO: This function assumes that the `source_files.tcl' will be placed inside its original path (syn_targets).
 This is necessary to properly generate the relative paths for the file list when expanding filenames.
@@ -228,17 +228,50 @@ INFO: Useful function for Verilog-Perl hierarchy extraction."
       (write-file output-file))))
 
 
+(defun larumbe/fpga-tags-files-from-source-files-tcl-get-files-lattice (file dir)
+  "Create gtags.files from FILE `source_files.tcl' for Lattice projects.
+
+Similar to `larumbe/fpga-tags-files-from-source-files-tcl-get-files-vivado'."
+  (let ((output-file (larumbe/path-join dir "gtags.files")))
+    (unless (or (string= (file-name-nondirectory file) "source_list.tcl")
+                (string= (file-name-nondirectory file) "source_list_script.tcl"))
+      (error "Not in 'source_list.tcl file!!"))
+    (with-temp-buffer
+      ;; (clone-indirect-buffer-other-window "*debug*" t) ; Option B: used here (however, cannot save temp buffer while debugging)
+      (insert-file-contents file)
+      (goto-char (point-min))
+      (save-excursion
+        (while (re-search-forward " -include" nil t)
+          (goto-char (match-beginning 0))
+          (kill-line)))
+      (keep-lines larumbe/hdl-source-extension-regex)
+      (larumbe/replace-regexp-whole-buffer "^prj_src add " "")
+      ;; First expand with absolute path ...
+      (larumbe/buffer-expand-filenames t (file-name-directory file))
+      ;; and then get relative path with respect to current dir
+      ;; INFO: Must be executed at the root of a sandbox!
+      (larumbe/buffer-expand-filenames nil dir)
+      (write-file output-file))))
+
+
 ;;;###autoload
 (defun larumbe/fpga-tags-files-from-source-files-tcl ()
-  "Extract GTAGS from `source_files.tcl' at current projectile root."
-  (interactive)
+  "Extract GTAGS from `source_files.tcl' at current projectile root.
+
+Ask for used technology. Depending on this parameter, a different
+function to parse source_files and extract gtags.files is used.
+Defaults to Xilinx Vivado."
+  (interactive "P")
   (let* ((dir         (projectile-project-root))
          (syn-tgt-dir (larumbe/path-join dir "syn_targets"))
+         (technology  (completing-read "Tech: " '("Xilinx" "Lattice")))
          (sources-file))
     (unless (file-exists-p syn-tgt-dir)
       (error "No syn_targets for current project!"))
     (setq sources-file (read-file-name "source_files.tcl path: " syn-tgt-dir))
-    (larumbe/fpga-tags-files-from-source-files-tcl-get-files sources-file dir)
+    (pcase technology
+      ("Xilinx"  (larumbe/fpga-tags-files-from-source-files-tcl-get-files-xilinx  sources-file dir))
+      ("Lattice" (larumbe/fpga-tags-files-from-source-files-tcl-get-files-lattice sources-file dir)))
     (larumbe/gtags-create-tags-async-process dir)))
 
 
