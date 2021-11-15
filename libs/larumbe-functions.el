@@ -318,6 +318,16 @@ If more than 2 args are required, use `f-join'"
     (message "Flycheck disabled")))
 
 
+;;;###autoload
+(defun larumbe/scratch (&optional arg)
+  "Switch to scratch buffer."
+  (interactive)
+  (delete-other-windows)
+  (split-window-right)
+  (other-window 1)
+  (switch-to-buffer "*scratch*"))
+
+
 ;;;; More complex/less frequently used
 ;;;###autoload
 (defun larumbe/buffer-expand-filenames (&optional absolute exp-dir)
