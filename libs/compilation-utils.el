@@ -63,7 +63,7 @@
     (vvp-error             "^\\(?1:ERROR\\): \\(?2:.*\\):\\(?3:[0-9]+\\):"   2 3 nil   2 nil (1 compilation-warning-face) (2 compilation-warning-face) (3 compilation-line-face))
     (vvp-info              "^\\(?1:LXT2 info\\):"                            1 nil nil 0 nil)))
 
-(defvar larumbe/compilation-error-re-lattice-synplify
+(defvar larumbe/compilation-error-re-diamond
   '((ltc-error     "^@\\(?1:E\\): [A-Z0-9]+ :\"\\(?2:[0-9a-zA-Z./_-]+\\)\":\\(?3:[0-9]+\\):\\(?4:[0-9]+\\):" 2 3 4 2 nil (1 compilation-error-face))
     (ltc-error2    "^@\\(?1:E\\): [A-Z0-9]+ [:]?|" nil nil nil 2 nil (1 compilation-error-face))
     (ltc-warning   "^@\\(?1:W\\): [A-Z0-9]+ :\"\\(?2:[0-9a-zA-Z./_-]+\\)\":\\(?3:[0-9]+\\):\\(?4:[0-9]+\\):" 2 3 4 1 nil (1 compilation-warning-face))
@@ -127,8 +127,8 @@
     ("verilator"    . (larumbe/compilation-error-re-verilator))
     ("iverilog"     . (larumbe/compilation-error-re-iverilog))
     ("synopsys-dc"  . (larumbe/compilation-error-re-synopsys-dc))
-    ("lattice"      . (larumbe/compilation-error-re-lattice-synplify))
-    ("scons"        . (larumbe/compilation-error-re-xrun larumbe/compilation-error-re-vivado larumbe/compilation-error-re-lattice-synplify larumbe/compilation-error-re-scons larumbe/compilation-error-re-python))
+    ("diamond"      . (larumbe/compilation-error-re-diamond))
+    ("scons"        . (larumbe/compilation-error-re-xrun larumbe/compilation-error-re-vivado larumbe/compilation-error-re-diamond larumbe/compilation-error-re-scons larumbe/compilation-error-re-python))
     ("pax"          . (larumbe/compilation-error-re-xrun larumbe/compilation-error-re-pax larumbe/compilation-error-re-gcc))
     ("ableton"      . (larumbe/compilation-error-re-python larumbe/compilation-error-re-ableton))))
 
