@@ -67,26 +67,17 @@
     (list b e allcomp)))
 
 
-(defun larumbe/diamond-shell-send-exit-command ()
-  "Send 'exit' command to quit Diamond console."
-  (interactive)
-  (let ((proc (get-buffer-process larumbe/diamond-shell-buffer)))
-    (comint-send-string proc "exit")
-    (comint-send-string proc "\n")))
-
-
 (define-minor-mode larumbe/diamond-shell-completion-at-point-mode
   "Add extensions for Diamond TCL shell.
 Autocompletion based on `diamond' package keywords."
-  :keymap
-  '(("\C-d" . larumbe/diamond-shell-send-exit-command)) ; Should override `comint-delchar-or-maybe-eof'
+  :lighter "Diamond"
   (when (not (equal (buffer-name (current-buffer)) larumbe/diamond-shell-buffer))
     (error "Not in Diamond shell buffer!"))
   (make-local-variable 'comint-dynamic-complete-functions) ; Use this variable instead of `completion-at-point-functions' to preserve file-name expansion
   (if larumbe/diamond-shell-completion-at-point-mode
       ;; INFO: It seems that without appending, the `larumbe/diamond-shell-completion-at-point' will have precedence
       ;; over other functions present in `comint-dynamic-complete-functions'
-      (add-to-list 'comint-dynamic-complete-functions #'larumbe/diamond-shell-completion-at-point)
+      (add-to-list 'comint-dynamic-complete-functions #'larumbe/diamond-shell-completion-at-point :append)
     (delete #'larumbe/diamond-shell-completion-at-point comint-dynamic-complete-functions)))
 
 
