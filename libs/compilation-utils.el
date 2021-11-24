@@ -29,7 +29,7 @@
     (vivado-info      "^\\(?1:^INFO: \\)\\(?2:.*\\[\\(?3:.*\\):\\(?4:[0-9]+\\)\\]\\)"             3   4   nil 0 nil (1 compilation-info-face))
     (vivado-info2     "^\\(?1:^INFO:\\) "                                                         1   nil nil 0 nil)))
 
-;; Leveraged from verilog-mode (verilog-IES: Incisive Enterprise Simulator) and extended for UVM
+;; Leveraged from verilog-mode (verilog-IES) and extended for UVM/OVM
 (defvar larumbe/compilation-error-re-xrun
   '((xrun-fatal    "^[a-z]+: \\(?1:\\*F\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?2:[^ \t,]+\\),\\(?3:[0-9]+\\)\\)" 2 3 nil 2 nil (1 compilation-error-face))
     (xrun-fatal2   "^[a-z]+: \\(?1:\\*F\\),[0-9A-Z]+: " 1 nil nil 2 nil)
@@ -47,7 +47,12 @@
     (uvm-warning  "^\\(?1:UVM_WARNING\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))" 2 3 nil 1 nil (1 compilation-warning-face))
     (uvm-warning2 "^\\(?1:UVM_WARNING\\) @" nil nil nil 1 nil (1 compilation-warning-face))
     (uvm-info     "^\\(?1:UVM_INFO\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"    2 3 nil 0 nil (1 compilation-info-face))
-    (uvm-info2    "^\\(?1:UVM_INFO\\) @"    nil nil nil 0 nil (1 compilation-info-face))))
+    (uvm-info2    "^\\(?1:UVM_INFO\\) @"    nil nil nil 0 nil (1 compilation-info-face))
+    ;; OVM
+    (ovm-fatal    "^\\(?1:OVM_FATAL\\) @"   nil nil nil 2 nil (1 compilation-error-face))
+    (ovm-error    "^\\(?1:OVM_ERROR\\) @"   nil nil nil 2 nil (1 compilation-error-face))
+    (ovm-warning  "^\\(?1:OVM_WARNING\\) @" nil nil nil 1 nil (1 compilation-warning-face))
+    (ovm-info     "^\\(?1:OVM_INFO\\) @"    nil nil nil 0 nil (1 compilation-info-face))))
 
 ;; Fetched from verilog-mode variable: `verilog-error-regexp-emacs-alist'.
 (defvar larumbe/compilation-error-re-verilator
