@@ -41,18 +41,18 @@
     (xrun-note2    "^[a-z]+: \\(?1:\\*N\\),[0-9A-Z]+: " 1 nil nil 0 nil)
     ;; UVM
     (uvm-fatal    "^\\(?1:UVM_FATAL\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"   2 3 nil 2 nil (1 compilation-error-face))
-    (uvm-fatal2   "^\\(?1:UVM_FATAL\\) @"   nil nil nil 2 nil (1 compilation-error-face))
+    (uvm-fatal2   "^\\(?1:UVM_FATAL\\) @"   1 nil nil 2 nil)
     (uvm-error    "^\\(?1:UVM_ERROR\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"   2 3 nil 2 nil (1 compilation-error-face))
-    (uvm-error2   "^\\(?1:UVM_ERROR\\) @"   nil nil nil 2 nil (1 compilation-error-face))
+    (uvm-error2   "^\\(?1:UVM_ERROR\\) @"   1 nil nil 2 nil)
     (uvm-warning  "^\\(?1:UVM_WARNING\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))" 2 3 nil 1 nil (1 compilation-warning-face))
-    (uvm-warning2 "^\\(?1:UVM_WARNING\\) @" nil nil nil 1 nil (1 compilation-warning-face))
+    (uvm-warning2 "^\\(?1:UVM_WARNING\\) @" 1 nil nil 1 nil)
     (uvm-info     "^\\(?1:UVM_INFO\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"    2 3 nil 0 nil (1 compilation-info-face))
-    (uvm-info2    "^\\(?1:UVM_INFO\\) @"    nil nil nil 0 nil (1 compilation-info-face))
+    (uvm-info2    "^\\(?1:UVM_INFO\\) @"    1 nil nil 0 nil)
     ;; OVM
-    (ovm-fatal    "^\\(?1:OVM_FATAL\\) @"   nil nil nil 2 nil (1 compilation-error-face))
-    (ovm-error    "^\\(?1:OVM_ERROR\\) @"   nil nil nil 2 nil (1 compilation-error-face))
-    (ovm-warning  "^\\(?1:OVM_WARNING\\) @" nil nil nil 1 nil (1 compilation-warning-face))
-    (ovm-info     "^\\(?1:OVM_INFO\\) @"    nil nil nil 0 nil (1 compilation-info-face))))
+    (ovm-fatal    "^\\(?1:OVM_FATAL\\) @ \\(?2:[0-9]+\\): "   1 nil nil 2 nil (2 compilation-line-face))
+    (ovm-error    "^\\(?1:OVM_ERROR\\) @ \\(?2:[0-9]+\\): "   1 nil nil 2 nil (2 compilation-line-face))
+    (ovm-warning  "^\\(?1:OVM_WARNING\\) @ \\(?2:[0-9]+\\): " 1 nil nil 1 nil (2 compilation-line-face))
+    (ovm-info     "^\\(?1:OVM_INFO\\) @ \\(?2:[0-9]+\\): "    1 nil nil 0 nil (2 compilation-line-face))))
 
 ;; Fetched from verilog-mode variable: `verilog-error-regexp-emacs-alist'.
 (defvar larumbe/compilation-error-re-verilator
@@ -70,11 +70,11 @@
 
 (defvar larumbe/compilation-error-re-diamond
   '((ltc-error     "^@\\(?1:E\\): [A-Z0-9]+ :\"\\(?2:[0-9a-zA-Z./_-]+\\)\":\\(?3:[0-9]+\\):\\(?4:[0-9]+\\):" 2 3 4 2 nil (1 compilation-error-face))
-    (ltc-error2    "^@\\(?1:E\\): [A-Z0-9]+ [:]?|" nil nil nil 2 nil (1 compilation-error-face))
+    (ltc-error2    "^@\\(?1:E\\): [A-Z0-9]+ [:]?|" 1 nil nil 2 nil)
     (ltc-warning   "^@\\(?1:W\\): [A-Z0-9]+ :\"\\(?2:[0-9a-zA-Z./_-]+\\)\":\\(?3:[0-9]+\\):\\(?4:[0-9]+\\):" 2 3 4 1 nil (1 compilation-warning-face))
-    (ltc-warning2  "^@\\(?1:W\\): [A-Z0-9]+ [:]?|" nil nil nil 1 nil (1 compilation-warning-face))
+    (ltc-warning2  "^@\\(?1:W\\): [A-Z0-9]+ [:]?|" 1 nil nil 1 nil)
     (ltc-note      "^@\\(?1:N\\): [A-Z0-9]+ :\"\\(?2:[0-9a-zA-Z./_-]+\\)\":\\(?3:[0-9]+\\):\\(?4:[0-9]+\\):" 2 3 4 0 nil (1 compilation-info-face))
-    (ltc-note2     "^@\\(?1:N\\): [A-Z0-9]+ [:]?|" nil nil nil 0 nil (1 compilation-info-face))
+    (ltc-note2     "^@\\(?1:N\\): [A-Z0-9]+ [:]?|" 1 nil nil 0 nil)
     (ltc-info      "^@\\(?1:I\\):"                 nil nil nil 0 nil (1 compilation-line-face))
     ))
 
