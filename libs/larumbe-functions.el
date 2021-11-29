@@ -90,13 +90,21 @@ If optional NO-LINE is given, then do not copy line to `kill-ring'"
 
 ;;;; Navigation
 ;;;###autoload
-(defun larumbe/find-file-at-point ()
-  "Wrapper for `ffap' without asking for the file."
+(defun larumbe/find-file-at-point (&optional fn-push-marker-stack)
+  "Wrapper for `ffap' without asking for the file.
+
+If optional function FN-PUSH-MARKER-STACK arg is provided,
+push to the related marker-stack instead of the xref default."
   (interactive)
+  (when fn-push-marker-stack
+    (unless (fboundp fn-push-marker-stack)
+      (error "%s not a recognized function" fn-push-marker-stack)))
   (let ((file (thing-at-point 'filename)))
     (if (file-exists-p file)
         (progn
-          (xref-push-marker-stack)
+          (if fn-push-marker-stack
+              (funcall fn-push-marker-stack)
+            (xref-push-marker-stack))
           (ffap file))
       (message "File \"%s\" does not exist (check point or current path)" file))))
 
