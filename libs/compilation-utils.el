@@ -71,10 +71,13 @@
 (defvar larumbe/compilation-error-re-diamond
   '((ltc-error     "^@\\(?1:E\\): [A-Z0-9]+ :\"\\(?2:[0-9a-zA-Z./_-]+\\)\":\\(?3:[0-9]+\\):\\(?4:[0-9]+\\):" 2 3 4 2 nil (1 compilation-error-face))
     (ltc-error2    "^@\\(?1:E\\): [A-Z0-9]+ [:]?|" 1 nil nil 2 nil)
+    (ltc-error3    "^@\\(?1:E\\):"                 1 nil nil 2 nil)
     (ltc-warning   "^@\\(?1:W\\): [A-Z0-9]+ :\"\\(?2:[0-9a-zA-Z./_-]+\\)\":\\(?3:[0-9]+\\):\\(?4:[0-9]+\\):" 2 3 4 1 nil (1 compilation-warning-face))
     (ltc-warning2  "^@\\(?1:W\\): [A-Z0-9]+ [:]?|" 1 nil nil 1 nil)
+    (ltc-warning3  "^@\\(?1:W\\):"                 1 nil nil 1 nil)
     (ltc-note      "^@\\(?1:N\\): [A-Z0-9]+ :\"\\(?2:[0-9a-zA-Z./_-]+\\)\":\\(?3:[0-9]+\\):\\(?4:[0-9]+\\):" 2 3 4 0 nil (1 compilation-info-face))
     (ltc-note2     "^@\\(?1:N\\): [A-Z0-9]+ [:]?|" 1 nil nil 0 nil)
+    (ltc-note3     "^@\\(?1:N\\):"                 1 nil nil 0 nil)
     (ltc-info      "^@\\(?1:I\\):"                 nil nil nil 0 nil (1 compilation-line-face))
     ))
 
