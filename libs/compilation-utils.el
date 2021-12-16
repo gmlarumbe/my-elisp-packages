@@ -147,6 +147,24 @@
 
 ;;;; Functions
 ;;;###autoload
+(defun larumbe/compile (cmd buf)
+  "Compile with command CMD in buffer BUF.
+
+If BUF is in use, ask for confirmation to re-use it."
+  (interactive)
+  ;; Check BUF exists
+  (when (get-buffer buf)
+    (if (yes-or-no-p (concat "Buffer " buf " in use. Reuse it?"))
+        (switch-to-buffer buf)
+      (error "Aborting compilation!")))
+  ;; Compile
+  (compile cmd)
+  ;; If BUF does not exist, set up properties from default *compilation*
+  (unless (get-buffer buf)
+    (rename-buffer buf)))
+
+
+;;;###autoload
 (defun larumbe/compilation-error-re-set (parser)
   "Set variables `compilation-error-regexp-alist' and `compilation-error-regexp-alist-alist' according to PARSER."
   (interactive (list (completing-read "Select parser: " (mapcar 'car larumbe/compilation-custom-regexp-sets))))
