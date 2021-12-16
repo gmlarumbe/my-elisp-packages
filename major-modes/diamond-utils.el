@@ -89,7 +89,7 @@ Autocompletion based on `diamond' package keywords."
     (error "Could not find diamond in $PATH.  Add it or set `larumbe/diamond-shell-bin'"))
   (let ((command (concat larumbe/diamond-shell-bin " " (mapconcat #'identity larumbe/diamond-shell-cmd-switches " ")))
         (bufname larumbe/diamond-shell-buffer)
-        (parser  "diamond"))
+        (parser  "synplify"))
     (larumbe/compilation-interactive command bufname parser)
     (larumbe/diamond-shell-completion-at-point-mode 1)
     (company-mode 1)))
