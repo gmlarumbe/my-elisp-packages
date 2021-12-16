@@ -18,27 +18,42 @@
 (require 'compile)
 
 
+;;;; Additional faces
+(defvar larumbe/compilation-gray-face 'larumbe/compilation-gray-face)
+(defface larumbe/compilation-gray-face
+  '((t (:foreground "gray55")))
+  "Gray extra face for compilation regexp parsing"
+  :group 'compilation-extra-faces)
+
+(defvar larumbe/compilation-binary-face 'larumbe/compilation-binary-face)
+(defface larumbe/compilation-binary-face
+  '((t (:foreground "goldenrod")))
+  "Binary extra face for instances compilation regexp parsing"
+  :group 'compilation-extra-faces)
+
+
+
 ;;;; Variables
 (defvar larumbe/compilation-error-re-vivado
-  '((vivado-error     "^\\(?1:^ERROR: \\)\\(?2:.*\\[\\(?3:.*\\):\\(?4:[0-9]+\\)\\]\\)"            3   4   nil 2 nil (1 compilation-error-face))
-    (vivado-error2    "^\\(?1:^ERROR:\\) "                                                        1   nil nil 2 nil)
-    (vivado-critical  "^\\(?1:^CRITICAL WARNING: \\)\\(?2:.*\\[\\(?3:.*\\):\\(?4:[0-9]+\\)\\]\\)" 3   4   nil 1 nil (1 compilation-error-face))
-    (vivado-critical2 "^\\(?1:^CRITICAL WARNING:\\) "                                             1   nil nil 1 nil)
-    (vivado-warning   "^\\(?1:^WARNING: \\)\\(?2:.*\\[\\(?3:.*\\):\\(?4:[0-9]+\\)\\]\\)"          3   4   nil 1 nil (1 compilation-warning-face))
-    (vivado-warning2  "^\\(?1:^WARNING:\\) "                                                      1   nil nil 1 nil)
-    (vivado-info      "^\\(?1:^INFO: \\)\\(?2:.*\\[\\(?3:.*\\):\\(?4:[0-9]+\\)\\]\\)"             3   4   nil 0 nil (1 compilation-info-face))
-    (vivado-info2     "^\\(?1:^INFO:\\) "                                                         1   nil nil 0 nil)))
+  '((vivado-error     "^\\(?1:^ERROR:\\) \\(?2:\\[[ a-zA-Z0-9\./_-]+\\]\\)\\(?3:.*\\[\\(?4:.*\\):\\(?5:[0-9]+\\)\\]\\)"            4 5   nil 2 nil (1 compilation-error-face)   (2 larumbe/compilation-gray-face))
+    (vivado-error2    "^\\(?1:^ERROR:\\) \\(?2:\\[[ a-zA-Z0-9\./_-]+\\]\\)"                                                        1 nil nil 2 nil (1 compilation-error-face)   (2 larumbe/compilation-gray-face))
+    (vivado-critical  "^\\(?1:^CRITICAL WARNING:\\) \\(?2:\\[[ a-zA-Z0-9\./_-]+\\]\\)\\(?3:.*\\[\\(?4:.*\\):\\(?5:[0-9]+\\)\\]\\)" 4 5   nil 1 nil (1 compilation-error-face)   (2 larumbe/compilation-gray-face))
+    (vivado-critical2 "^\\(?1:^CRITICAL WARNING:\\) \\(?2:\\[[ a-zA-Z0-9\./_-]+\\]\\)"                                             1 nil nil 1 nil (1 compilation-error-face)   (2 larumbe/compilation-gray-face))
+    (vivado-warning   "^\\(?1:^WARNING:\\) \\(?2:\\[[ a-zA-Z0-9\./_-]+\\]\\)\\(?3:.*\\[\\(?4:.*\\):\\(?5:[0-9]+\\)\\]\\)"          4 5   nil 1 nil (1 compilation-warning-face) (2 larumbe/compilation-gray-face))
+    (vivado-warning2  "^\\(?1:^WARNING:\\) \\(?2:\\[[ a-zA-Z0-9\./_-]+\\]\\)"                                                      1 nil nil 1 nil (1 compilation-warning-face) (2 larumbe/compilation-gray-face))
+    (vivado-info      "^\\(?1:^INFO:\\) \\(?2:\\[[ a-zA-Z0-9\./_-]+\\]\\)\\(?3:.*\\[\\(?4:.*\\):\\(?5:[0-9]+\\)\\]\\)"             4 5   nil 0 nil (1 compilation-info-face)    (2 larumbe/compilation-gray-face))
+    (vivado-info2     "^\\(?1:^INFO:\\) \\(?2:\\[[ a-zA-Z0-9\./_-]+\\]\\)"                                                         1 nil nil 0 nil (1 compilation-info-face)    (2 larumbe/compilation-gray-face))))
 
 ;; Leveraged from verilog-mode (verilog-IES) and extended for UVM/OVM
 (defvar larumbe/compilation-error-re-xrun
-  '((xrun-fatal    "^[a-z]+: \\(?1:\\*F\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?2:[^ \t,]+\\),\\(?3:[0-9]+\\)\\)" 2 3 nil 2 nil (1 compilation-error-face))
-    (xrun-fatal2   "^[a-z]+: \\(?1:\\*F\\),[0-9A-Z]+: " 1 nil nil 2 nil)
-    (xrun-error    "^[a-z]+: \\(?1:\\*E\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?2:[^ \t,]+\\),\\(?3:[0-9]+\\)\\)" 2 3 nil 2 nil (1 compilation-error-face))
-    (xrun-error2   "^[a-z]+: \\(?1:\\*E\\),[0-9A-Z]+: " 1 nil nil 2 nil)
-    (xrun-warning  "^[a-z]+: \\(?1:\\*W\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?2:[^ \t,]+\\),\\(?3:[0-9]+\\)\\)" 2 3 nil 1 nil (1 compilation-warning-face))
-    (xrun-warning2 "^[a-z]+: \\(?1:\\*W\\),[0-9A-Z]+: " 1 nil nil 1 nil)
-    (xrun-note     "^[a-z]+: \\(?1:\\*N\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?2:[^ \t,]+\\),\\(?3:[0-9]+\\)\\)" 2 3 nil 0 nil (1 compilation-info-face))
-    (xrun-note2    "^[a-z]+: \\(?1:\\*N\\),[0-9A-Z]+: " 1 nil nil 0 nil)
+  '((xrun-fatal    "\\(?1:^[a-z]+\\): \\(?2:\\*F\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?3:[^ \t,]+\\),\\(?4:[0-9]+\\)|\\(?5:[0-9]+\\)\\)" 3 4 5 2 nil (1 larumbe/compilation-binary-face) (2 compilation-error-face))
+    (xrun-fatal2   "\\(?1:^[a-z]+\\): \\(?2:\\*F\\),[0-9A-Z]+:" 1 nil nil 2 nil (1 larumbe/compilation-binary-face) (2 compilation-error-face))
+    (xrun-error    "\\(?1:^[a-z]+\\): \\(?2:\\*E\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?3:[^ \t,]+\\),\\(?4:[0-9]+\\)|\\(?5:[0-9]+\\)\\)" 3 4 5 2 nil (1 larumbe/compilation-binary-face) (2 compilation-error-face))
+    (xrun-error2   "\\(?1:^[a-z]+\\): \\(?2:\\*E\\),[0-9A-Z]+:" 1 nil nil 2 nil (1 larumbe/compilation-binary-face) (2 compilation-error-face))
+    (xrun-warning  "\\(?1:^[a-z]+\\): \\(?2:\\*W\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?3:[^ \t,]+\\),\\(?4:[0-9]+\\)|\\(?5:[0-9]+\\)\\)" 3 4 5 1 nil (1 larumbe/compilation-binary-face) (2 compilation-warning-face))
+    (xrun-warning2 "\\(?1:^[a-z]+\\): \\(?2:\\*W\\),[0-9A-Z]+:" 1 nil nil 1 nil (1 larumbe/compilation-binary-face) (2 compilation-warning-face))
+    (xrun-note     "\\(?1:^[a-z]+\\): \\(?2:\\*N\\),[0-9A-Z]+\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?3:[^ \t,]+\\),\\(?4:[0-9]+\\)|\\(?5:[0-9]+\\)\\)" 3 4 5 0 nil (1 larumbe/compilation-binary-face) (2 compilation-info-face))
+    (xrun-note2    "\\(?1:^[a-z]+\\): \\(?2:\\*N\\),[0-9A-Z]+:" 1 nil nil 0 nil (1 larumbe/compilation-binary-face) (2 compilation-info-face))
     ;; UVM
     (uvm-fatal    "^\\(?1:UVM_FATAL\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"   2 3 nil 2 nil (1 compilation-error-face))
     (uvm-fatal2   "^\\(?1:UVM_FATAL\\) @"   1 nil nil 2 nil)
