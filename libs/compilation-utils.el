@@ -147,21 +147,25 @@
 
 ;;;; Functions
 ;;;###autoload
-(defun larumbe/compile (cmd buf)
-  "Compile with command CMD in buffer BUF.
+(defun larumbe/compile (cmd &optional buf parser)
+  "Compile with command CMD in buffer BUF with parser PARSER.
 
 If BUF is in use, ask for confirmation to re-use it."
-  (interactive)
-  ;; Check BUF exists
-  (when (get-buffer buf)
+  ;; Check BUF exists if optional argument was passed
+  (when (and buf
+             (get-buffer buf))
     (if (yes-or-no-p (concat "Buffer " buf " in use. Reuse it?"))
         (switch-to-buffer buf)
       (error "Aborting compilation!")))
   ;; Compile
   (compile cmd)
   ;; If BUF does not exist, set up properties from default *compilation*
-  (unless (get-buffer buf)
-    (rename-buffer buf)))
+  (when (and buf
+             (not (get-buffer buf)))
+    (rename-buffer buf))
+  ;; Set parser
+  (when parser
+    (larumbe/compilation-error-re-set parser)))
 
 
 ;;;###autoload
