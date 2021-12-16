@@ -298,8 +298,7 @@ Defaults to Xilinx Vivado."
 (defun larumbe/vivado-compile ()
   "Use TCL console to elaborate/compile a Vivado design."
   (interactive)
-  (compile (larumbe/vivado-compile-command))
-  (larumbe/compilation-show-buffer "vivado"))
+  (larumbe/compile (larumbe/vivado-compile-command) nil "vivado"))
 
 
 ;;;; Vivado XSim
@@ -326,8 +325,7 @@ If UNIVERSAL-ARG is provided, then simulate as well."
   (let ((cmd (larumbe/vivado-sim-compile-command)))
     (when universal-arg
       (setq cmd (concat cmd " && source simulate.sh")))
-    (compile cmd)
-    (larumbe/compilation-show-buffer "vivado")))
+    (larumbe/compile cmd nil "vivado")))
 
 
 ;;;; Xcelium
@@ -461,8 +459,9 @@ LIB will be compiled at `larumbe/xrun-vivado-simlibs-compiled-path'."
                       cmd-lib-args))
     ;; Compile
     (set (make-local-variable 'compile-command) cmd)
-    (compile (concat "cd " larumbe/xrun-vivado-simlibs-compiled-path " && " compile-command))
-    (larumbe/compilation-show-buffer "xrun")))
+    (larumbe/compile (concat "cd " larumbe/xrun-vivado-simlibs-compiled-path " && " compile-command)
+                     nil
+                     "xrun")))
 
 
 ;;;###autoload
@@ -495,8 +494,9 @@ If UNIVERSAL-ARG is given, elaborate the design instead."
       (setq cmd larumbe/xrun-command))
     (set (make-local-variable 'compile-command) cmd)
     (make-directory (larumbe/xrun-compilation-dir) t)
-    (compile (concat "cd " (larumbe/xrun-compilation-dir) " && " compile-command))
-    (larumbe/compilation-show-buffer "xrun")))
+    (larumbe/compile (concat "cd " (larumbe/xrun-compilation-dir) " && " compile-command)
+                     nil
+                     "xrun")))
 
 
 
@@ -524,8 +524,7 @@ If UNIVERSAL-ARG is given, elaborate the design instead."
   "Files created with ggtags and renamed (useful for small projects).
 It's faster than Vivado elaboration since it does not elaborate design"
   (interactive)
-  (compile (larumbe/verilator-lint-command))
-  (larumbe/compilation-show-buffer "verilator"))
+  (larumbe/compile (larumbe/verilator-lint-command) nil "verilator"))
 
 
 ;;;; Reggen
@@ -588,8 +587,7 @@ It's faster than Vivado elaboration since it does not elaborate design"
            "-v" ; Verbose
            ))
     ;; Compile
-    (compile reggen-command)
-    (larumbe/compilation-error-re-set "scons")))
+    (larumbe/compile reggen-command nil "scons")))
 
 
 

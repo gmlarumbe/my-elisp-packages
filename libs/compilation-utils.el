@@ -165,7 +165,11 @@ If BUF is in use, ask for confirmation to re-use it."
     (rename-buffer buf))
   ;; Set parser
   (when parser
-    (larumbe/compilation-error-re-set parser)))
+    (larumbe/compilation-error-re-set parser))
+  ;; Final tweaks
+  (delete-other-windows)
+  (setq truncate-lines t)
+  (goto-char (point-max)))
 
 
 ;;;###autoload
@@ -182,20 +186,6 @@ If BUF is in use, ask for confirmation to re-use it."
     (when (boundp 'compilation-error-regexp-alist-alist)
       (setq compilation-error-regexp-alist regex-alist)
       (setq compilation-error-regexp-alist-alist regex-alist-alist))))
-
-
-
-;;;###autoload
-(defun larumbe/compilation-show-buffer (&optional parser)
-  "Show custom compilation buffer.
-Set *compilation* buffer regexp-alist-alist to its corresponding PARSER regexp."
-  (interactive)
-  (delete-other-windows)
-  (switch-to-buffer "*compilation*")
-  (when parser
-    (larumbe/compilation-error-re-set parser))
-  (goto-char (point-max)))
-
 
 
 ;;;###autoload
