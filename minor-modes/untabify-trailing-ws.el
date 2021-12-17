@@ -32,10 +32,10 @@ Meant to be used as a wrapper for write-file-functions hook."
 
 
 ;;;###autoload
-(define-minor-mode untabify-trailing-ws
+(define-minor-mode untabify-trailing-ws-mode
   "Basic minor mode to untabify and delete trailing whitespaces by using write-file-functions hooks."
   :global t
-  (if untabify-trailing-ws
+  (if untabify-trailing-ws-mode
       (progn   ;; Enable
         (setq untabify-delete-trailing-whitespace t)
         (add-hook 'write-file-functions #'untabify-trailing-whitespace)
