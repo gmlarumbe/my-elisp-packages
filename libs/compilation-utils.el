@@ -318,6 +318,26 @@ Makes use of buffer-local variable `larumbe/compilation-interactive-buildcmd' to
       (comint-send-string proc "\n"))))
 
 
+;;;; Misc
+;; https://stackoverflow.com/questions/10946219/emacs-compilation-mode-wont-see-bash-alias
+(defun larumbe/compilation-shell-interactive-hook ()
+  "Needed to see bash alias in Emacs subshells."
+  (setq-local shell-file-name "bash")
+  (setq-local shell-command-switch "-ic"))
+
+;;;###autoload
+(define-minor-mode larumbe/compilation-read-bashrc-alias-mode
+  "Basic minor mode to set shell command interactive to read .bashrc alias for compilation modes."
+  :global t
+  (if larumbe/compilation-read-bashrc-alias-mode
+      ;; Enable
+      (add-hook 'compilation-mode-hook #'larumbe/compilation-shell-interactive-hook)
+    ;; Disable
+    (remove-hook 'compilation-mode-hook #'larumbe/compilation-shell-interactive-hook)))
+
+
+
+
 
 (provide 'compilation-utils)
 
