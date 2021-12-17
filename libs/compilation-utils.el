@@ -162,6 +162,22 @@
 
 ;;;; Functions
 ;;;###autoload
+(defun larumbe/compilation-error-re-set (parser)
+  "Set variables `compilation-error-regexp-alist' and `compilation-error-regexp-alist-alist' according to PARSER."
+  (interactive (list (completing-read "Select parser: " (mapcar 'car larumbe/compilation-custom-regexp-sets))))
+  (let* ((regex-alist-quoted (cdr (assoc parser larumbe/compilation-custom-regexp-sets)))
+         (regex-alist (apply 'append (mapcar
+                                      (lambda (elm) (mapcar 'car (eval elm)))
+                                      regex-alist-quoted)))
+         (regex-alist-alist (apply 'append (mapcar
+                                            (lambda (elm) (eval elm))
+                                            regex-alist-quoted))))
+    (when (boundp 'compilation-error-regexp-alist-alist)
+      (setq compilation-error-regexp-alist regex-alist)
+      (setq compilation-error-regexp-alist-alist regex-alist-alist))))
+
+
+;;;###autoload
 (defun larumbe/compile (cmd &optional buf parser)
   "Compile with command CMD in buffer BUF with parser PARSER.
 
@@ -185,22 +201,6 @@ If BUF is in use, ask for confirmation to re-use it."
   (delete-other-windows)
   (setq truncate-lines t)
   (goto-char (point-max)))
-
-
-;;;###autoload
-(defun larumbe/compilation-error-re-set (parser)
-  "Set variables `compilation-error-regexp-alist' and `compilation-error-regexp-alist-alist' according to PARSER."
-  (interactive (list (completing-read "Select parser: " (mapcar 'car larumbe/compilation-custom-regexp-sets))))
-  (let* ((regex-alist-quoted (cdr (assoc parser larumbe/compilation-custom-regexp-sets)))
-         (regex-alist (apply 'append (mapcar
-                                      (lambda (elm) (mapcar 'car (eval elm)))
-                                      regex-alist-quoted)))
-         (regex-alist-alist (apply 'append (mapcar
-                                            (lambda (elm) (eval elm))
-                                            regex-alist-quoted))))
-    (when (boundp 'compilation-error-regexp-alist-alist)
-      (setq compilation-error-regexp-alist regex-alist)
-      (setq compilation-error-regexp-alist-alist regex-alist-alist))))
 
 
 ;;;###autoload
