@@ -84,17 +84,21 @@
     (vvp-info              "^\\(?1:LXT2 info\\):"                            1 nil nil 0 nil)))
 
 (defvar larumbe/compilation-error-re-synplify
-  '((ltc-error     "^@\\(?1:E\\): [A-Z0-9]+ :\"\\(?2:[0-9a-zA-Z./_-]+\\)\":\\(?3:[0-9]+\\):\\(?4:[0-9]+\\):" 2 3 4 2 nil (1 compilation-error-face))
-    (ltc-error2    "^@\\(?1:E\\): [A-Z0-9]+ [:]?|" 1 nil nil 2 nil)
-    (ltc-error3    "^@\\(?1:E\\):"                 1 nil nil 2 nil)
-    (ltc-warning   "^@\\(?1:W\\): [A-Z0-9]+ :\"\\(?2:[0-9a-zA-Z./_-]+\\)\":\\(?3:[0-9]+\\):\\(?4:[0-9]+\\):" 2 3 4 1 nil (1 compilation-warning-face))
-    (ltc-warning2  "^@\\(?1:W\\): [A-Z0-9]+ [:]?|" 1 nil nil 1 nil)
-    (ltc-warning3  "^@\\(?1:W\\):"                 1 nil nil 1 nil)
-    (ltc-note      "^@\\(?1:N\\): [A-Z0-9]+ :\"\\(?2:[0-9a-zA-Z./_-]+\\)\":\\(?3:[0-9]+\\):\\(?4:[0-9]+\\):" 2 3 4 0 nil (1 compilation-info-face))
-    (ltc-note2     "^@\\(?1:N\\): [A-Z0-9]+ [:]?|" 1 nil nil 0 nil)
-    (ltc-note3     "^@\\(?1:N\\):"                 1 nil nil 0 nil)
-    (ltc-info      "^@\\(?1:I\\):"                 nil nil nil 0 nil (1 compilation-line-face))
-    ))
+  '((synp-error     "^@\\(?1:E\\): \\(?2:[A-Z0-9]+\\) :\"\\(?3:[0-9a-zA-Z./_-]+\\)\":\\(?4:[0-9]+\\):\\(?5:[0-9]+\\):" 3 4 5 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
+    (synp-error2    "^@\\(?1:E\\): \\(?2:[A-Z0-9]+\\) [:]?|" 1 nil nil 2 nil (2 larumbe/compilation-gray-face))
+    (synp-error3    "^@\\(?1:E\\):" 1 nil nil 2 nil)
+    (synp-warning   "^@\\(?1:W\\): \\(?2:[A-Z0-9]+\\) :\"\\(?3:[0-9a-zA-Z./_-]+\\)\":\\(?4:[0-9]+\\):\\(?5:[0-9]+\\):" 3 4 5 1 nil (1 compilation-warning-face) (2 larumbe/compilation-gray-face))
+    (synp-warning2  "^@\\(?1:W\\): \\(?2:[A-Z0-9]+\\) [:]?|" 1 nil nil 1 nil (2 larumbe/compilation-gray-face))
+    (synp-warning3  "^@\\(?1:W\\):" 1 nil nil 1 nil)
+    (synp-note      "^@\\(?1:N\\): \\(?2:[A-Z0-9]+\\) :\"\\(?3:[0-9a-zA-Z./_-]+\\)\":\\(?4:[0-9]+\\):\\(?5:[0-9]+\\):" 3 4 5 0 nil (1 compilation-info-face) (2 larumbe/compilation-gray-face))
+    (synp-note2     "^@\\(?1:N\\): \\(?2:[A-Z0-9]+\\) [:]?|" 1 nil nil 0 nil (2 larumbe/compilation-gray-face))
+    ;; Did not find what those meant online, so set as warnings
+    (synp-alt-info  "^@\\(?1:A\\): \\(?2:[A-Z0-9]+\\) :\"\\(?3:[0-9a-zA-Z./_-]+\\)\":\\(?4:[0-9]+\\):\\(?5:[0-9]+\\):" 3 4 5 0 nil (1 compilation-info-face) (2 larumbe/compilation-gray-face))
+    (synp-alt-info2 "^@\\(?1:A\\): \\(?2:[A-Z0-9]+\\) [:]?|" 1 nil nil 0 nil (2 larumbe/compilation-gray-face))
+    (synp-alt-info3 "^@\\(?1:A\\):" 1 nil nil 0 nil)
+    (synp-note3     "^@\\(?1:N\\):" 1 nil nil 0 nil)
+    (synp-info      "^@\\(?1:I\\):" nil nil nil 0 nil (1 compilation-line-face))
+    (synp-log       "^@\\(?1:L\\):" nil nil nil 0 nil (1 compilation-line-face))))
 
 (defvar larumbe/compilation-error-re-synopsys-dc
   '((dc-error     "\\(?1:^Error\\):  \\(?2:[0-9a-zA-Z./_-]+\\):\\(?3:[0-9]+\\): "       2 3   nil 2 nil (1 compilation-error-face))
