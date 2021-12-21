@@ -322,6 +322,14 @@ Makes use of buffer-local variable `larumbe/compilation-interactive-buildcmd' to
       (comint-send-string proc "\n"))))
 
 
+;;;; Compilation-derived modes
+(define-compilation-mode synplify-log-mode "Synplify Log"
+  "Synplify log compilation mode"
+  (setq-local compilation-skip-threshold 2) ; Default to check errors
+  (setq-local compilation-error-regexp-alist (mapcar 'car larumbe/compilation-error-re-synplify))
+  (setq-local compilation-error-regexp-alist-alist larumbe/compilation-error-re-synplify))
+
+
 ;;;; Misc
 ;; https://stackoverflow.com/questions/10946219/emacs-compilation-mode-wont-see-bash-alias
 (defun larumbe/compilation-shell-interactive-hook ()
