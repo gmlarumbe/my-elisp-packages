@@ -177,8 +177,8 @@
                                             (lambda (elm) (eval elm))
                                             regex-alist-quoted))))
     (when (boundp 'compilation-error-regexp-alist-alist)
-      (setq compilation-error-regexp-alist regex-alist)
-      (setq compilation-error-regexp-alist-alist regex-alist-alist))))
+      (setq-local compilation-error-regexp-alist regex-alist)
+      (setq-local compilation-error-regexp-alist-alist regex-alist-alist))))
 
 
 ;;;###autoload
