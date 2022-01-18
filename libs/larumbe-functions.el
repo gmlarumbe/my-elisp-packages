@@ -327,13 +327,12 @@ If more than 2 args are required, use `f-join'"
 
 
 ;;;###autoload
-(defun larumbe/scratch (&optional arg)
-  "Switch to scratch buffer."
+(defun larumbe/scratch-toggle ()
+  "Toggle showing scratch buffer at current buffer."
   (interactive)
-  (delete-other-windows)
-  (split-window-right)
-  (other-window 1)
-  (switch-to-buffer "*scratch*"))
+  (if (string= (buffer-name) "*scratch*")
+      (previous-buffer)
+    (switch-to-buffer "*scratch*")))
 
 
 ;;;; More complex/less frequently used
