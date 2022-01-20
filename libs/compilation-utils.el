@@ -115,6 +115,13 @@
     (dc-info      "\\(?1:^Information\\):  \\(?2:[0-9a-zA-Z./_-]+\\):\\(?3:[0-9]+\\): " 2 3   nil 0 nil (1 compilation-info-face))
     (dc-info-2    "\\(?1:^Information\\): .*"                                           1 nil nil 0 nil)))
 
+(defvar larumbe/compilation-error-re-lattice
+  '((lattice-error     "\\(?1:^ERROR\\) -"                                                                    1 nil nil 2 nil (1 compilation-error-face))
+    (lattice-warning   "\\(?1:^WARNING\\) - \\(?2:[a-z0-9]+:\\) \\(?3:[a-zA-Z0-9\./_-]+\\)(\\(?4:[0-9]+\\)):" 3 4   nil 1 nil (1 compilation-warning-face) (2 larumbe/compilation-binary-face))
+    (lattice-warning2  "\\(?1:^WARNING\\) - \\(?2:[a-z0-9]+:\\)"                                              1 nil nil 1 nil (1 compilation-warning-face) (2 larumbe/compilation-binary-face))
+    (lattice-warning3  "\\(?1:^WARNING\\) -"                                                                  1 nil nil 1 nil (1 compilation-warning-face))))
+
+
 ;; Adapted from compilation.el for Python tracebacks
 (defvar larumbe/compilation-error-re-python
   '((python-tracebacks-and-caml "File \\(\"?\\)\\([^,\" \n\t<>]+\\)\\1, lines? \\([0-9]+\\)-?\\([0-9]+\\)?\\(?:$\\|, \\(?: characters? \\([0-9]+\\)-?\\([0-9]+\\)?:\\)?\\([ \n]Warning\\(?: [0-9]+\\)?:\\)?\\)?" 2 (3 . 4) (5 . 6) (7)) ; Some regexps where not detected on some SCons errors (original one did not have `?' at the end)
@@ -162,7 +169,7 @@
     ("iverilog"     . (larumbe/compilation-error-re-iverilog))
     ("synplify"     . (larumbe/compilation-error-re-synplify))
     ("synopsys-dc"  . (larumbe/compilation-error-re-synopsys-dc))
-    ("scons"        . (larumbe/compilation-error-re-xrun larumbe/compilation-error-re-vivado larumbe/compilation-error-re-synplify larumbe/compilation-error-re-scons larumbe/compilation-error-re-python))
+    ("scons"        . (larumbe/compilation-error-re-xrun larumbe/compilation-error-re-vivado larumbe/compilation-error-re-synplify larumbe/compilation-error-re-lattice larumbe/compilation-error-re-scons larumbe/compilation-error-re-python))
     ("pax"          . (larumbe/compilation-error-re-xrun larumbe/compilation-error-re-pax larumbe/compilation-error-re-gcc))
     ("ableton"      . (larumbe/compilation-error-re-python larumbe/compilation-error-re-ableton))))
 
