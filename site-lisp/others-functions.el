@@ -88,6 +88,15 @@ there's a region, all lines that region covers will be duplicated."
       (goto-char (+ origin (* (length region) arg) arg)))))
 
 
+;; https://stackoverflow.com/questions/730751/hiding-m-in-emacs
+;;;###autoload
+(defun remove-dos-eol ()
+  "Do not show ^M in files containing mixed UNIX and DOS line endings."
+  (interactive)
+  (setq buffer-display-table (make-display-table))
+  (aset buffer-display-table ?\^M []))
+
+
 ;;;; Lists/regexp/strings/files/directories
 ;; http://ergoemacs.org/emacs/elisp_read_file_content.html
 ;;;###autoload
