@@ -1,4 +1,4 @@
-;;; diamond-utils.el --- Lattice Diamond Utils  -*- lexical-binding: t -*-
+;;; lattice-utils.el --- Lattice Utils  -*- lexical-binding: t -*-
 ;;; Commentary:
 ;;; Code:
 
@@ -112,6 +112,48 @@ When the region is active, send the region instead."
     (goto-char end)))
 
 
-(provide 'diamond-utils)
 
-;;; diamond-utils.el ends here
+;;;; Synplify-TCL Shell
+(defvar larumbe/synplify-shell-bin (executable-find "synplify_premier"))
+(defvar larumbe/synplify-shell-cmd-switches
+  '("-shell"
+    "-licensetype synplifypremierdp"
+    "-verbose_log"))
+(defvar larumbe/synplify-shell-buffer "*synplify-tcl*")
+
+
+;;;###autoload
+(defun larumbe/synplify-shell ()
+  "Invoke a TCL Synplify shell with the proper regexps, suited for compilation."
+  (interactive)
+  (unless larumbe/synplify-shell-bin
+    (error "Could not find synplify in $PATH.  Add it or set `larumbe/synplify-shell-bin'"))
+  (let ((command (concat larumbe/synplify-shell-bin " " (mapconcat #'identity larumbe/synplify-shell-cmd-switches " ")))
+        (bufname larumbe/synplify-shell-buffer)
+        (parser  "synplify"))
+    (larumbe/compilation-interactive command bufname parser)
+    (larumbe/synplify-shell-completion-at-point-mode 1)
+    (company-mode 1)))
+
+
+(defun larumbe/synplify-shell-tcl-send-line-or-region-and-step ()
+  "Send the current line to the inferior shell and step to the next line.
+When the region is active, send the region instead."
+  (interactive)
+  (let (from to end (proc (get-buffer-process larumbe/synplify-shell-buffer)))
+    (if (use-region-p)
+        (setq from (region-beginning)
+              to (region-end)
+              end to)
+      (setq from (line-beginning-position)
+            to (line-end-position)
+            end (1+ to)))
+    (comint-send-string proc (buffer-substring-no-properties from to))
+    (comint-send-string proc "\n")
+    (goto-char end)))
+
+
+
+(provide 'lattice-utils)
+
+;;; lattice-utils.el ends here
