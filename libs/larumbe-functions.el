@@ -387,7 +387,7 @@ If ABS-PATH is set to non-nil the directory files will be shown as absolute path
     (save-window-excursion
       (with-temp-buffer
         (mapc
-         (lambda (dir) (insert (mapconcat #'identity (directory-files-recursively dir re) "\n")))
+         (lambda (dir) (insert (mapconcat #'identity (directory-files-recursively dir re nil nil t) "\n")))
          (list base-dir))
         (if abs-path
             (larumbe/buffer-expand-filenames t)
