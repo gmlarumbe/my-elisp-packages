@@ -138,23 +138,35 @@ Pulls on master branch."
 
 ;;;###autoload
 (defun larumbe/git-check-dirty-repos (repos &optional buf)
-    "Show dirty repos/files of every repo in REPOS in *git-dirty* buffer.
+  "Show dirty repos/files of every repo in REPOS in *git-dirty* buffer.
 REPOS is assumed to be a list of strings containing the path of each repo.
 
 If optional variable BUF is set show output in BUF, otherwise in *git-dirty* buffer."
-    (interactive)
-    (unless (executable-find "git")
-      (error "Git is not installed!"))
-    (unless buf
-      (setq buf "*git-dirty*"))
-    (let ((shell-command-dont-erase-buffer t) ; Append output to buffer
-          (cmd))
-      (dolist (repo repos)
-        (message "Checking %s..." repo)
-        (setq cmd (concat "git -C " repo " update-index --refresh >> /dev/null || "
-                          "{ echo \"Repo " repo " has uncommitted changes!\" && git -C " repo " update-index --refresh; git -C " repo " diff-index --quiet HEAD --; echo \"\"; }"))
-        (shell-command cmd buf buf))
-      (pop-to-buffer buf)))
+  (interactive)
+  (unless (executable-find "git")
+    (error "Git is not installed!"))
+  (unless buf
+    (setq buf "*git-dirty*"))
+  (let ((shell-command-dont-erase-buffer t) ; Append output to buffer
+        (cmd))
+    ;; Clean buffer at the beginning
+    (get-buffer-create buf)
+    (with-current-buffer buf
+      (erase-buffer))
+    ;; Check dirty repos
+    (dolist (repo repos)
+      (message "Checking %s..." repo)
+      (setq cmd (concat "git -C " repo " status --short"))
+      (unless (string= "" (shell-command-to-string cmd))
+	(message "Repo %s has uncommitted changes!" repo)
+	(with-current-buffer buf
+	  (goto-char (point-max))
+	  (insert "Repo " repo ":\n"))
+	(shell-command cmd buf buf)
+	(with-current-buffer buf
+	  (goto-char (point-max))
+	  (insert "\n"))))
+    (pop-to-buffer buf)))
 
 
 
