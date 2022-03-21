@@ -7,6 +7,10 @@
 (require 'clearcase)
 
 
+(defvar larumbe/clearcase-edcs-views nil
+  "List of available Config Spec views")
+
+
 ;;;###autoload
 (defun larumbe/clearcase-checkout ()
   "Clearcase checkout based on `current-buffer'/dired' context."
@@ -262,6 +266,32 @@
                                version)))))
 
 
+;;;###autoload
+;; DANGER: Seems it's not very useful since the original function already creates a cache of existin views?
+(defun larumbe/clearcase-edcs-edit ()
+  "Clearcase config spec editing from a list of possible views.
+If called with prefix arg, call original command to fetch list of available views."
+  (interactive)
+  (let (view)
+    (if current-prefix-arg
+	(call-interactively #'clearcase-edcs-edit)
+      (setq view (completing-read "Select view: " larumbe/clearcase-edcs-views nil t))
+      (clearcase-edcs-edit view))))
+
+
+;;;###autoload
+(defun larumbe/clearcase-lsprivate ()
+  "List all view private files."
+  (interactive)
+  (clearcase-utl-populate-and-view-buffer
+   "*clearcase*"
+   nil
+   (lambda ()
+     (clearcase-ct-do-cleartool-command "lsprivate"
+					nil
+					'unused
+					nil))))
+
 
 
 (defhydra hydra-clearcase (:color blue
@@ -273,7 +303,7 @@
   ("FF" larumbe/clearcase-dired-checkout-current-dir "Check-out dir")
   ("FU" larumbe/clearcase-dired-uncheckout-current-dir "Uncheck-out dir")
   ("CE" larumbe/clearcase-edit-checkout-comment "Edit CO comment")
-  ("SS" clearcase-edcs-edit "Edit Config-Spec")
+  ("SS" larumbe/clearcase-edcs-edit "Edit Config-Spec")
 
   ("e"  larumbe/clearcase-ediff-pred "Ediff predecesor" :column "Diff")
   ("E"  larumbe/clearcase-ediff-named-version "Ediff named version")
@@ -288,6 +318,7 @@
   ("w"  larumbe/clearcase-what-rule "Config Spec Rule")
   ("a"  larumbe/clearcase-annotate "Annotate")
   ("?"  larumbe/clearcase-describe "Describe")
+  ("#"  larumbe/clearcase-lsprivate "List private files")
 
   ("Gd"  larumbe/clearcase-gui-diff-pred "Diff predecesor" :column "GUI")
   ("GD"  larumbe/clearcase-gui-diff-named-version "Diff named version")
