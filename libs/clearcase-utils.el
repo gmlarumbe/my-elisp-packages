@@ -247,6 +247,22 @@
       (message "Aborting uncheckout dir..."))))
 
 
+;;;###autoload
+(defun larumbe/clearcase-version-other-window ()
+  "Clearcase version other window based on  `current-buffer' or dired context."
+  (interactive)
+  (let (version filename)
+    (if (not (string= major-mode "dired-mode"))
+	(call-interactively #'clearcase-version-other-window)
+      ;; `dired-mode' pointed fileCheck current
+      (setq filename (dired-get-filename))
+      (setq version (clearcase-read-version-name (format "Version of %s to visit: " filename) filename))
+      (find-file-other-window (clearcase-vxpath-cons-vxpath
+                               (clearcase-vxpath-element-part filename)
+                               version)))))
+
+
+
 
 (defhydra hydra-clearcase (:color blue
                            :hint  nil)
@@ -268,7 +284,7 @@
 
   ("l"  larumbe/clearcase-list-history "Element history" :column "History")
   ("L"  larumbe/clearcase-browse-vtree "Browse Vtree")
-  ("~"  clearcase-version-other-window "Version other window")
+  ("~"  larumbe/clearcase-version-other-window "Version other window")
   ("w"  larumbe/clearcase-what-rule "Config Spec Rule")
   ("a"  larumbe/clearcase-annotate "Annotate")
   ("?"  larumbe/clearcase-describe "Describe")
