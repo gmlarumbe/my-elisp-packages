@@ -257,7 +257,7 @@
   (interactive)
   (let (version filename)
     (if (not (string= major-mode "dired-mode"))
-	(call-interactively #'clearcase-version-other-window)
+        (call-interactively #'clearcase-version-other-window)
       ;; `dired-mode' pointed fileCheck current
       (setq filename (dired-get-filename))
       (setq version (clearcase-read-version-name (format "Version of %s to visit: " filename) filename))
@@ -274,7 +274,7 @@ If called with prefix arg, call original command to fetch list of available view
   (interactive)
   (let (view)
     (if current-prefix-arg
-	(call-interactively #'clearcase-edcs-edit)
+        (call-interactively #'clearcase-edcs-edit)
       (setq view (completing-read "Select view: " larumbe/clearcase-edcs-views nil t))
       (clearcase-edcs-edit view))))
 
@@ -288,9 +288,46 @@ If called with prefix arg, call original command to fetch list of available view
    nil
    (lambda ()
      (clearcase-ct-do-cleartool-command "lsprivate"
-					nil
-					'unused
-					nil))))
+                                        nil
+                                        'unused
+                                        nil))))
+
+
+;;;###autoload
+(defun larumbe/clearcase-find-checkouts-current-dir-recursively ()
+  "Find the checkouts on current-directory.
+INFO: Tried to do a copy/paste/modified version from `clearcase-find-checkouts-in-current-view'
+by using `clearcase-ct-blocking-call' but there were some errors with the directory not being
+updated sometimes (could have to do with `clearcase-ct-wdir' or other stuff...)."
+  (interactive)
+  (clearcase-utl-populate-and-view-buffer
+   "*clearcase*"
+   nil
+   (lambda ()
+     (clearcase-ct-do-cleartool-command "lsco"
+                                        nil
+                                        'unused
+                                        '("-recurse")))))
+
+
+;;;###autoload
+(defun larumbe/clearcase-ediff-two-versions ()
+  "Ediff two versions of `current-buffer' or dired file at point."
+  (interactive)
+  (let (file old-version new-version old-file new-file)
+    (if (string= major-mode "dired-mode")
+        (setq file (dired-get-filename))
+      (setq file buffer-file-name))
+    ;; Some basic check
+    (unless (clearcase-file-is-in-mvfs-p file)
+      (error "File not in MVFS!"))
+    (setq old-version (clearcase-read-version-name "Old version: " file))
+    (setq new-version (clearcase-read-version-name "New version: " file))
+    (setq old-file (clearcase-vxpath-cons-vxpath (clearcase-vxpath-element-part file) old-version))
+    (setq new-file (clearcase-vxpath-cons-vxpath (clearcase-vxpath-element-part file) new-version))
+    ;; Run `ediff-swap-buffers' to show new version on the right window
+    (ediff-files old-file new-file #'ediff-swap-buffers)))
+
 
 
 
@@ -300,14 +337,16 @@ If called with prefix arg, call original command to fetch list of available view
   ("u"  larumbe/clearcase-uncheckout "Uncheck-out file(s)")                 ; "Unstage"
   ("p"  larumbe/clearcase-checkin "Check-in file(s)")                       ; "Push"
   ("s"  clearcase-find-checkouts-in-current-view "List CO of Current View") ; "Status"
+  ("SS" larumbe/clearcase-find-checkouts-current-dir-recursively "List CO of current dir")
   ("FF" larumbe/clearcase-dired-checkout-current-dir "Check-out dir")
   ("FU" larumbe/clearcase-dired-uncheckout-current-dir "Uncheck-out dir")
   ("CE" larumbe/clearcase-edit-checkout-comment "Edit CO comment")
-  ("SS" larumbe/clearcase-edcs-edit "Edit Config-Spec")
+  ("PP" larumbe/clearcase-edcs-edit "Edit Config-Spec")
 
   ("e"  larumbe/clearcase-ediff-pred "Ediff predecesor" :column "Diff")
   ("E"  larumbe/clearcase-ediff-named-version "Ediff named version")
   ("be" larumbe/clearcase-ediff-branch-base "Ediff branch base")
+  ("ve" larumbe/clearcase-ediff-two-versions "Ediff two specific versions")
   ("d"  larumbe/clearcase-diff-pred "Diff predecesor")
   ("D"  larumbe/clearcase-diff-named-version "Diff named version")
   ("bd" larumbe/clearcase-diff-branch-base "Diff branch base")
