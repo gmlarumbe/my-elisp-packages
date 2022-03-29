@@ -3,6 +3,8 @@
 ;;; Code:
 
 
+;;;; Wrappers + Hydra
+
 (require 'hydra)
 (require 'clearcase)
 
@@ -307,7 +309,11 @@ updated sometimes (could have to do with `clearcase-ct-wdir' or other stuff...).
      (clearcase-ct-do-cleartool-command "lsco"
                                         nil
                                         'unused
-                                        '("-recurse")))))
+                                        '("-recurse"))))
+  (with-current-buffer "*clearcase-lsco*"
+    (setq buffer-read-only nil)
+    (insert (format "List of checkouts for dir: %s\n\n" default-directory))
+    (setq buffer-read-only nil)))
 
 
 ;;;###autoload
@@ -397,6 +403,124 @@ updated sometimes (could have to do with `clearcase-ct-wdir' or other stuff...).
   ("Q"   top-level :color blue)
   ("C-g" nil       :color blue))
 
+
+
+;;;; Compilation-log
+(defvar larumbe/font-lock-cc-log-date-time-face 'larumbe/font-lock-cc-log-date-time-face)
+(defface larumbe/font-lock-cc-log-date-time-face
+  '((t (:foreground "dark gray"))) ""
+  :group 'cc-log-font-lock-faces)
+
+(defvar larumbe/font-lock-cc-log-separator-face 'larumbe/font-lock-cc-log-separator-face)
+(defface larumbe/font-lock-cc-log-separator-face
+  '((t (:foreground "dim gray"))) ""
+  :group 'cc-log-font-lock-faces)
+
+(defvar larumbe/font-lock-cc-log-author-face 'larumbe/font-lock-cc-log-author-face)
+(defface larumbe/font-lock-cc-log-author-face
+  '((t (:foreground "yellow green"))) ""
+  :group 'cc-log-font-lock-faces)
+
+(defvar larumbe/font-lock-cc-log-action-face 'larumbe/font-lock-cc-log-action-face)
+(defface larumbe/font-lock-cc-log-action-face
+  '((t (:foreground "tan"))) ""
+  :group 'cc-log-font-lock-faces)
+
+(defvar larumbe/font-lock-cc-log-file-face 'larumbe/font-lock-cc-log-file-face)
+(defface larumbe/font-lock-cc-log-file-face
+  '((t (:foreground "light sky blue"))) ""
+  :group 'cc-log-font-lock-faces)
+
+(defvar larumbe/font-lock-cc-log-labels-notes-face 'larumbe/font-lock-cc-log-labels-notes-face)
+(defface larumbe/font-lock-cc-log-labels-notes-face
+  '((t (:foreground "dark gray"))) ""
+  :group 'cc-log-font-lock-faces)
+
+
+(defvar larumbe/clearcase-log-regexp "--\\(?1:[0-9-]+\\)\\\(?2:T\\)\\(?3:[0-9:]+\\)\s+\\(?4:[a-z]+\\)\s+\\(?5:[a-z ]+\\)\"\\(?6:.*\\)\"\\(?7:[ /_a-zA-Z0-9(),-.]+\\)?")
+(defvar larumbe/clearcase-log-regexp-alist-alist
+  `((log ,larumbe/clearcase-log-regexp 6 nil nil 2 nil
+         (1 larumbe/font-lock-cc-log-date-time-face)
+         (2 larumbe/font-lock-cc-log-separator-face)
+         (3 larumbe/font-lock-cc-log-date-time-face)
+         (4 larumbe/font-lock-cc-log-author-face)
+         (5 larumbe/font-lock-cc-log-action-face)
+         (6 larumbe/font-lock-cc-log-file-face)
+         (7 larumbe/font-lock-cc-log-labels-notes-face))))
+
+
+(defun larumbe/clearcase-log-clean-buffer ()
+  "Clean (kill/quit) clearcase-log buffer."
+  (interactive)
+  (let (kill-buffer-query-functions)
+    (kill-buffer)
+    (delete-window)))
+
+
+(defun larumbe/clearcase-log-ediff-version ()
+  "Ediff version of file at current error with another selected version via `completing-read'."
+  (interactive)
+  (let* ((current-version (larumbe/clearcase-log-mode-find-version))
+         (current-file (clearcase-vxpath-element-part current-version))
+         (version (clearcase-read-version-name "Version for comparison: " current-file)))
+    (clearcase-ediff-file-with-version current-version version)))
+
+
+(defun larumbe/clearcase-log-mode-find-version ()
+  "Find file@@/version of current errr."
+  (let (file)
+    (save-excursion
+      (beginning-of-line)
+      (when (re-search-forward larumbe/clearcase-log-regexp (point-at-eol) t)
+        (setq file (match-string-no-properties 6)))
+      (if (file-name-absolute-p file)
+          file ; lshistory provides absolute path
+        (expand-file-name file))))) ; while lsco -recurse provides relatives paths
+
+
+(defun larumbe/clearcase-log-ediff-pred ()
+  "Use Ediff to compare the selected version against its predecessor in log mode."
+  (interactive)
+  (let* ((filename (larumbe/clearcase-log-mode-find-version))
+         (predecessor (clearcase-fprop-predecessor-version filename)))
+    (if (string= predecessor "")
+        (error "%s has no predecessor!" filename)
+      (clearcase-ediff-file-with-version filename predecessor))))
+
+(defun larumbe/clearcase-log-diff-pred ()
+  "Use diff to compare the selected version against its predecessor in log mode."
+  (interactive)
+  (let* ((filename (larumbe/clearcase-log-mode-find-version))
+         (predecessor (clearcase-fprop-predecessor-version filename)))
+    (if (string= predecessor "")
+        (error "%s has no predecessor!" filename)
+      (clearcase-diff-file-with-version filename predecessor))))
+
+
+;;;###autoload
+(define-compilation-mode clearcase-log-mode "CC-log"
+  "A mode for showing log from clearcase lshistory."
+  (setq-local compilation-error-regexp-alist '(log))
+  (setq-local compilation-error-regexp-alist-alist larumbe/clearcase-log-regexp-alist-alist)
+  (setq-local compilation-scroll-output nil)
+  ;; See `compilation-move-to-column' for details.
+  (setq-local compilation-first-column 0)
+  (setq-local compilation-error-screen-columns nil)
+  (setq-local compilation-disable-input t)
+  (setq-local compilation-always-kill t)
+  (setq-local find-file-suppress-same-file-warnings t) ; Fetched from ggtags
+  (setq-local truncate-lines t))
+
+(define-key clearcase-log-mode-map (kbd "C-o") #'compile-goto-error)
+(define-key clearcase-log-mode-map (kbd "C-j") #'compile-goto-error)
+(define-key clearcase-log-mode-map (kbd "o") #'compile-goto-error)
+(define-key clearcase-log-mode-map (kbd "p") #'compilation-previous-error)
+(define-key clearcase-log-mode-map (kbd "n") #'compilation-next-error)
+(define-key clearcase-log-mode-map (kbd "k") #'larumbe/clearcase-log-clean-buffer)
+(define-key clearcase-log-mode-map (kbd "q") #'larumbe/clearcase-log-clean-buffer)
+(define-key clearcase-log-mode-map (kbd "e") #'larumbe/clearcase-log-ediff-pred)
+(define-key clearcase-log-mode-map (kbd "E") #'larumbe/clearcase-log-ediff-version)
+(define-key clearcase-log-mode-map (kbd "d") #'larumbe/clearcase-log-diff-pred)
 
 
 (provide 'clearcase-utils)
