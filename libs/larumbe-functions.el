@@ -377,33 +377,34 @@ For example, in SystemVerilog, packages might need to be included before other f
 
 
 ;;;###autoload
-(defun larumbe/directory-files-recursively-to-file (base-dir file re &optional append exclude-re abs-path)
-  "Retrieve all files matching regexp RE of a specified BASE-DIR to output FILE.
+(defun larumbe/directory-files-recursively-to-file (base-dir filename re &optional append exclude-re)
+  "Retrieve all files matching regexp RE of a specified BASE-DIR to output FILENAME.
+
+FILENAME is just the name, not a path, and will be stored in BASE-DIR.
+
 If optional APPEND is set to non-nil, append result to existing FILE.
-Otherwise, overwrite old existing FILE with new results.
-If optional EXCLUDE-RE is set, delete paths with that regexp from generated file.
-If ABS-PATH is set to non-nil the directory files will be shown as absolute paths."
-  (let (buf)
+Otherwise, overwrite old existing FILENAME with new results.
+
+If optional EXCLUDE-RE is set, delete paths with that regexp from generated file."
+  (let ((default-directory base-dir)
+        buf)
     (save-window-excursion
       (with-temp-buffer
         (mapc
          (lambda (dir) (insert (mapconcat #'identity (directory-files-recursively dir re nil nil t) "\n")))
          (list base-dir))
-        (if abs-path
-            (larumbe/buffer-expand-filenames t)
-          (larumbe/buffer-expand-filenames))
-        ;; Append to existing file
-        (when (and (file-exists-p (larumbe/path-join base-dir file))
+        ;; Append to existing filename
+        (when (and (file-exists-p (larumbe/path-join base-dir filename))
                    append)
           (setq buf (current-buffer))
-          (find-file file)
+          (find-file filename)
           (goto-char (point-max))
           (newline)
           (insert-buffer-substring buf))
         ;; Filter according to optional parameter
         (when exclude-re
           (flush-lines exclude-re (point-min) (point-max)))
-        (write-file (larumbe/path-join base-dir file))))))
+        (write-file (larumbe/path-join base-dir filename))))))
 
 
 ;; https://stackoverflow.com/questions/3775377/how-do-you-diff-a-directory-for-only-files-of-a-specific-type
