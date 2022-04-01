@@ -158,26 +158,52 @@ If optional variable BUF is set show output in BUF, otherwise in *git-dirty* buf
       (message "Checking %s..." repo)
       (setq cmd (concat "git -C " repo " status --short"))
       (unless (string= "" (shell-command-to-string cmd))
-	(message "Repo %s has uncommitted changes!" repo)
-	(with-current-buffer buf
-	  (goto-char (point-max))
-	  (insert "Repo " repo ":\n"))
-	(shell-command cmd buf buf)
-	(with-current-buffer buf
-	  (goto-char (point-max))
-	  (insert "\n"))))
+        (message "Repo %s has uncommitted changes!" repo)
+        (with-current-buffer buf
+          (goto-char (point-max))
+          (insert "Repo " repo ":\n"))
+        (shell-command cmd buf buf)
+        (with-current-buffer buf
+          (goto-char (point-max))
+          (insert "\n"))))
     (pop-to-buffer buf)))
 
 
+;;;###autoload
+(defun larumbe/git-check-forked-repos (repos)
+  "Check REPOS to know which of them are forked.
+REPOS is assumed to be a list of strings containing the path of each repo.
 
-(defvar larumbe/emacs-conf-repos (append '("~/.elisp" "~/.elisp_private")
-                                         (larumbe/straight-packages)))
+Return list of strings with forked repos.
+A repo is considered forked if remote is not tracking origin."
+  (interactive)
+  (unless (executable-find "git")
+    (error "Git is not installed!"))
+  (let (forked-repos cmd cmd-out remote-branch)
+    ;; Check repos
+    (dolist (repo repos)
+      (message "Checking if %s is forked..." repo)
+      ;; (setq cmd (concat "git -C " repo " rev-parse --abbrev-ref --symbolic-full-name @{u}"))
+      (setq cmd (concat "git -C " repo " status -sb"))
+      ;; (setq cmd (concat "git -C " repo " for-each-ref --format='%(upstream:short)' \"$(git symbolic-ref -q HEAD)\""))
+      (setq cmd-out (shell-command-to-string cmd))
+      (setq remote-branch (car (cdr (split-string cmd-out "\\.\\.\\."))))
+      (when (string-prefix-p "fork/" remote-branch)
+        (message "Forked repo: %s" repo)
+        (push repo forked-repos)))
+    forked-repos))
+
 
 ;;;###autoload
-(defun larumbe/emacs-check-dirty-repos ()
-  "Show dirty emacs-conf files in *emacs-dirty* buffer."
-  (interactive)
-  (larumbe/git-check-dirty-repos larumbe/emacs-conf-repos "*emacs-dirty*"))
+(defun larumbe/emacs-check-dirty-repos (&optional all)
+  "Show dirty emacs-conf files in *emacs-dirty* buffer.
+If prefix-arg or ALL argument is passed, check all my emacs conf repos."
+  (interactive "P")
+  (let (repos)
+    (if current-prefix-arg
+        (setq repos larumbe/emacs-conf-repos-all)
+      (setq repos larumbe/emacs-conf-repos-devel))
+    (larumbe/git-check-dirty-repos repos "*emacs-dirty*")))
 
 
 
