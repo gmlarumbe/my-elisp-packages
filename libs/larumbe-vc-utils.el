@@ -201,7 +201,7 @@ If prefix-arg or ALL argument is passed, check all my emacs conf repos."
   (interactive "P")
   (let (repos)
     (if current-prefix-arg
-        (setq repos larumbe/emacs-conf-repos-all)
+        (setq repos (append larumbe/emacs-conf-repos (larumbe/straight-packages)))
       (setq repos larumbe/emacs-conf-repos-devel))
     (larumbe/git-check-dirty-repos repos "*emacs-dirty*")))
 
