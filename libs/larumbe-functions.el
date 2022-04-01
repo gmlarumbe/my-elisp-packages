@@ -335,6 +335,25 @@ If more than 2 args are required, use `f-join'"
     (switch-to-buffer "*scratch*")))
 
 
+
+;;;###autoload
+(defun larumbe/newline-advice (&optional ARG INTERACTIVE)
+  "Advice to set :before-until for newline functions of major-modes that
+kill *ag* or *xref* buffers."
+  (let* ((ag-buf "*ag search*")
+         (xref-buf "*xref*")
+         (ag-win (get-buffer-window ag-buf))
+         (xref-win (get-buffer-window xref-buf))
+         win)
+    ;; Look for buffers sequentialy
+    (setq win (or ag-win
+                  xref-win))
+    ;; Kill corresponding window and buffer
+    (when win
+      (quit-window t win)
+      win)))
+
+
 ;;;; More complex/less frequently used
 ;;;###autoload
 (defun larumbe/buffer-expand-filenames (&optional absolute exp-dir)
