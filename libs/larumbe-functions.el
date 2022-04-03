@@ -283,6 +283,21 @@ If more than 2 args are required, use `f-join'"
     nil))
 
 
+;;;###autoload
+(defun larumbe/find-extensions-major-mode (major-mode)
+  "Return a list of strings with extensions currently associated with MAJOR-MODE.
+Make use of `auto-mode-alist' registered extensions."
+  (let ((alist (copy-alist auto-mode-alist))
+        (alist-elm)
+        (ext)
+        (ext-list))
+    (while (setq alist-elm (rassoc major-mode alist))
+      (delete alist-elm alist)
+      (setq ext (car alist-elm))
+      (push ext ext-list))
+    ext-list))
+
+
 ;;;; Misc
 ;;;###autoload
 (defun larumbe/toggle-keyboard-layout ()
