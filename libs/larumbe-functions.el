@@ -342,12 +342,15 @@ If more than 2 args are required, use `f-join'"
 kill *ag* or *xref* buffers."
   (let* ((ag-buf "*ag search*")
          (xref-buf "*xref*")
+         (rgrep-buf "*ripgrep-search*")
          (ag-win (get-buffer-window ag-buf))
          (xref-win (get-buffer-window xref-buf))
+         (rgrep-win (get-buffer-window rgrep-buf))
          win)
     ;; Look for buffers sequentialy
     (setq win (or ag-win
-                  xref-win))
+                  xref-win
+                  rgrep-win))
     ;; Kill corresponding window and buffer
     (when win
       (quit-window t win)
