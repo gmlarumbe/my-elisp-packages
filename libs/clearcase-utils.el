@@ -453,8 +453,7 @@ updated sometimes (could have to do with `clearcase-ct-wdir' or other stuff...).
   "Clean (kill/quit) clearcase-log buffer."
   (interactive)
   (let (kill-buffer-query-functions)
-    (kill-buffer)
-    (delete-window)))
+    (quit-window t)))
 
 
 (defun larumbe/clearcase-log-ediff-version ()
