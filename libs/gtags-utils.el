@@ -205,8 +205,8 @@ Clean-up of buffer/window done by corresponding sentinel."
   (process-send-string larumbe/gtags-update-proc-name (concat str "\n")))
 
 
-(defun larumbe/gtags-update-hook ()
-  ""
+(defun larumbe/gtags-update-try-update ()
+  "Try to update gtags of current project, if existing."
   (let ((dir (ggtags-current-project-root)))
     (when dir
       (larumbe/gtags-update-send-string (concat "cd " dir))
@@ -249,12 +249,12 @@ It spawns a shell in the background that updates tags of current project."
   :global nil
   (if gtags-update-async-minor-mode
       (progn   ;; Enable
-        (add-hook 'after-save-hook #'larumbe/gtags-update-hook nil t)
+        (add-hook 'after-save-hook #'larumbe/gtags-update-try-update nil t)
         (larumbe/gtags-update-start-process)
         (when larumbe/gtags-update-verbose
           (message "Enabled gtags-update-async-minor-mode [current buffer]")))
     ;; Disable
-    (remove-hook 'after-save-hook #'larumbe/gtags-update-hook t)
+    (remove-hook 'after-save-hook #'larumbe/gtags-update-try-update t)
     (larumbe/gtags-update-kill-process)
     (when larumbe/gtags-update-verbose
       (message "Disabled gtags-update-async-minor-mode [current buffer]"))))
