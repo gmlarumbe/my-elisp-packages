@@ -152,6 +152,7 @@ If optional variable BUF is set show output in BUF, otherwise in *git-dirty* buf
     ;; Clean buffer at the beginning
     (get-buffer-create buf)
     (with-current-buffer buf
+      (view-mode -1)
       (erase-buffer))
     ;; Check dirty repos
     (dolist (repo repos)
@@ -166,7 +167,8 @@ If optional variable BUF is set show output in BUF, otherwise in *git-dirty* buf
         (with-current-buffer buf
           (goto-char (point-max))
           (insert "\n"))))
-    (pop-to-buffer buf)))
+    (pop-to-buffer buf)
+    (view-mode)))
 
 
 ;;;###autoload
