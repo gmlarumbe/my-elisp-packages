@@ -448,7 +448,7 @@ updated sometimes (could have to do with `clearcase-ct-wdir' or other stuff...).
   :group 'cc-log-font-lock-faces)
 
 
-(defvar larumbe/clearcase-log-regexp "--\\(?1:[0-9-]+\\)\\\(?2:T\\)\\(?3:[0-9:]+\\)\s+\\(?4:[a-z]+\\)\s+\\(?5:[a-z ]+\\)\"\\(?6:.*\\)\"\\(?7:[ /_a-zA-Z0-9(),-.]+\\)?")
+(defvar larumbe/clearcase-log-regexp "\\(--\\)?\\(?1:[0-9-:]+\\)\\\(?2:T\\)?\\(?3:[0-9-:]*\\)\s+\\(?4:[a-z]+\\)\s+\\(?5:[a-z ]+\\)\"\\(?6:.*\\)\"\\(?7:[ /_a-zA-Z0-9(),-.]+\\)?")
 (defvar larumbe/clearcase-log-regexp-alist-alist
   `((log ,larumbe/clearcase-log-regexp 6 nil nil 2 nil
          (1 larumbe/font-lock-cc-log-date-time-face)
@@ -477,7 +477,7 @@ updated sometimes (could have to do with `clearcase-ct-wdir' or other stuff...).
 
 
 (defun larumbe/clearcase-log-mode-find-version ()
-  "Find file@@/version of current errr."
+  "Find file@@/version of current error."
   (let (file)
     (save-excursion
       (beginning-of-line)
