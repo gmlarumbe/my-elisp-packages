@@ -404,6 +404,17 @@ updated sometimes (could have to do with `clearcase-ct-wdir' or other stuff...).
   ("C-g" nil       :color blue))
 
 
+;;;###autoload
+(defun larumbe/hydra-clearcase ()
+  "Wrapper for hydra-clearcase that prevents use of this tool if not inside a ClearCase object/directory."
+  (interactive)
+  (let ((file (if (string= major-mode "dired-mode")
+                  dired-directory
+                buffer-file-name)))
+    (unless (clearcase-file-is-in-mvfs-p file)
+      (error "Not in a ClearCase object!"))
+    (call-interactively #'hydra-clearcase/body)))
+
 
 ;;;; Compilation-log
 (defvar larumbe/font-lock-cc-log-date-time-face 'larumbe/font-lock-cc-log-date-time-face)
