@@ -152,7 +152,7 @@ If optional variable BUF is set show output in BUF, otherwise in *git-dirty* buf
     ;; Clean buffer at the beginning
     (get-buffer-create buf)
     (with-current-buffer buf
-      (view-mode -1)
+      (read-only-mode -1)
       (erase-buffer))
     ;; Check dirty repos
     (dolist (repo repos)
@@ -168,7 +168,8 @@ If optional variable BUF is set show output in BUF, otherwise in *git-dirty* buf
           (goto-char (point-max))
           (insert "\n"))))
     (pop-to-buffer buf)
-    (view-mode)))
+    (goto-char (point-min))
+    (git-dirty-mode)))
 
 
 ;;;###autoload
@@ -206,7 +207,6 @@ If prefix-arg or ALL argument is passed, check all my emacs conf repos."
         (setq repos (append larumbe/emacs-conf-repos-core (larumbe/straight-packages)))
       (setq repos larumbe/emacs-conf-repos-devel))
     (larumbe/git-check-dirty-repos repos "*emacs-dirty*")))
-
 
 
 ;;;###autoload
