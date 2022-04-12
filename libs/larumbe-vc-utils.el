@@ -208,6 +208,32 @@ If prefix-arg or ALL argument is passed, check all my emacs conf repos."
     (larumbe/git-check-dirty-repos repos "*emacs-dirty*")))
 
 
+(define-derived-mode git-dirty-mode fundamental-mode "Git-Dirty"
+  "A mode for Git-dirty status buffer."
+  (setq-local font-lock-defaults repo-font-lock-defaults)
+  (setq-local revert-buffer-function #'repo-revert-buffer)
+  (setq-local repo-workspace default-directory)
+  (read-only-mode))
+
+
+(defun larumbe/git-dirty-next-project ()
+  "Move to next project in Repo status buffer."
+  (interactive)
+  (let ((pos (point)))
+    (save-excursion
+      (forward-line)
+      (when (re-search-forward git-dirty-project-regexp nil t)
+        (setq pos (point))))
+    (when (> pos (point))
+      (goto-char pos)
+      (beginning-of-line))))
+
+(defun larumbe/git-dirty-previous-project ()
+  "Move to previous project in Repo status buffer."
+  (interactive)
+  (re-search-backward git-dirty-project-regexp nil t))
+
+
 
 ;;;###autoload
 (defun larumbe/set-vc-follow-symlinks ()
