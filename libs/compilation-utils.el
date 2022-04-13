@@ -175,7 +175,8 @@
 
 (defvar larumbe/compilation-custom-regexp-active nil)
 
-
+(defvar larumbe/compilation-ask-for-confirmation t
+  "Prompt for confirmation on reusing a buffer when executing `larumbe/compile'")
 
 
 ;;;; Functions
@@ -203,9 +204,11 @@ If BUF is in use, ask for confirmation to re-use it."
   ;; Check BUF exists if optional argument was passed
   (when (and buf
              (get-buffer buf))
-    (if (yes-or-no-p (concat "Buffer " buf " in use. Reuse it?"))
-        (switch-to-buffer buf)
-      (error "Aborting compilation!")))
+    (if larumbe/compilation-ask-for-confirmation
+        (if (yes-or-no-p (concat "Buffer " buf " in use. Reuse it?"))
+            (switch-to-buffer buf)
+          (error "Aborting compilation!"))
+      (switch-to-buffer buf)))
   ;; Compile
   (compile cmd)
   ;; If BUF does not exist, set up properties from default *compilation*
