@@ -335,6 +335,46 @@ updated sometimes (could have to do with `clearcase-ct-wdir' or other stuff...).
     (ediff-files old-file new-file #'ediff-swap-buffers)))
 
 
+;;;###autoload
+(defun larumbe/clearcase-merge-with-latest ()
+  "Merge file with LATEST version.
+If there are conflicts, use GUI Merge Manager.
+Intended to be used if it is not possible to check-in."
+  (interactive)
+  (let (file latest)
+    (if (string= major-mode "dired-mode")
+        (setq file (dired-get-filename))
+      (setq file buffer-file-name))
+    (setq latest (concat file "@@/main/LATEST"))
+    ;; Some basic check
+    (unless (clearcase-file-is-in-mvfs-p file)
+      (error "File not in MVFS!"))
+    (unless (file-exists-p latest)
+      (error "Error trying to find LATEST version!"))
+    ;; Merge command
+    (clearcase-utl-populate-and-view-buffer
+     "*clearcase-merge*"
+     nil
+     (lambda ()
+       (clearcase-ct-do-cleartool-command "merge"
+                                          nil
+                                          'unused
+                                          `("-to" ,file ,latest))))
+    (with-current-buffer "*clearcase-merge*"
+      (read-only-mode 1))))
+
+
+;;;###autoload
+(defun larumbe/clearcase-ediff-with-latest ()
+  "Ediff with latest version.
+Useful to be performed before running a merge with LATEST to predict merge conflicts."
+  (interactive)
+  (let ((file (if (string= major-mode "dired-mode")
+                  (dired-get-filename)
+                buffer-file-name)))
+    (clearcase-ediff-file-with-version "main/LATEST" file)))
+
+
 
 
 (defhydra hydra-clearcase (:color blue
@@ -364,6 +404,9 @@ updated sometimes (could have to do with `clearcase-ct-wdir' or other stuff...).
   ("a"  larumbe/clearcase-annotate "Annotate")
   ("?"  larumbe/clearcase-describe "Describe")
   ("#"  larumbe/clearcase-lsprivate "List private files")
+
+  ("me" larumbe/clearcase-ediff-with-latest "Ediff with LATEST" :column "Merge")
+  ("mm" larumbe/clearcase-merge-with-latest "Merge with LATEST")
 
   ("Gd"  larumbe/clearcase-gui-diff-pred "Diff predecesor" :column "GUI")
   ("GD"  larumbe/clearcase-gui-diff-named-version "Diff named version")
