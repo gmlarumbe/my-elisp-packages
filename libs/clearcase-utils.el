@@ -372,7 +372,7 @@ Useful to be performed before running a merge with LATEST to predict merge confl
   (let ((file (if (string= major-mode "dired-mode")
                   (dired-get-filename)
                 buffer-file-name)))
-    (clearcase-ediff-file-with-version "main/LATEST" file)))
+    (clearcase-ediff-file-with-version file "/main/LATEST")))
 
 
 
