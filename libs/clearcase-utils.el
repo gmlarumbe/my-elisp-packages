@@ -392,9 +392,9 @@ Useful to be performed before running a merge with LATEST to predict merge confl
   ("u"  larumbe/clearcase-uncheckout "Uncheck-out file(s)")                 ; "Unstage"
   ("p"  larumbe/clearcase-checkin "Check-in file(s)/dir")                   ; "Push"
   ("s"  clearcase-find-checkouts-in-current-view "List CO of Current View") ; "Status"
-  ("SS" larumbe/clearcase-find-checkouts-current-dir-recursively "List CO of current dir")
-  ("FF" larumbe/clearcase-dired-checkout-current-dir "Check-out dir")
-  ("FU" larumbe/clearcase-dired-uncheckout-current-dir "Uncheck-out dir")
+  ("S" larumbe/clearcase-find-checkouts-current-dir-recursively "List CO of current dir")
+  ("F" larumbe/clearcase-dired-checkout-current-dir "Check-out dir")
+  ("U" larumbe/clearcase-dired-uncheckout-current-dir "Uncheck-out dir")
   ("CE" larumbe/clearcase-edit-checkout-comment "Edit CO comment")
   ("PP" larumbe/clearcase-edcs-edit "Edit Config-Spec")
 
@@ -407,12 +407,12 @@ Useful to be performed before running a merge with LATEST to predict merge confl
   ("bd" larumbe/clearcase-diff-branch-base "Diff branch base")
 
   ("l"  larumbe/clearcase-list-history "Element history" :column "History")
-  ("L"  larumbe/clearcase-browse-vtree "Browse Vtree")
-  ("~"  larumbe/clearcase-version-other-window "Version other window")
-  ("w"  larumbe/clearcase-what-rule "Config Spec Rule")
   ("a"  larumbe/clearcase-annotate "Annotate")
   ("?"  larumbe/clearcase-describe "Describe")
+  ("L"  larumbe/clearcase-browse-vtree "Browse Vtree")
   ("#"  larumbe/clearcase-lsprivate "List private files")
+  ("w"  larumbe/clearcase-what-rule "Config Spec Rule")
+  ("~"  larumbe/clearcase-version-other-window "Version other window")
 
   ("me" larumbe/clearcase-ediff-with-latest "Ediff with LATEST" :column "Merge")
   ("mm" larumbe/clearcase-merge-with-latest "Merge with LATEST")
@@ -430,12 +430,7 @@ Useful to be performed before running a merge with LATEST to predict merge confl
 
   ("On"  larumbe/clearcase-next-action "Next Action" :column "Others")
   ("Om"  larumbe/clearcase-mkelem "Make Element")
-  ("Oh"  larumbe/clearcase-hijack "Hijack")
-  ("Ou"  larumbe/clearcase-unhijack "Unhijack")
   ("Ot"  clearcase-mkbrtype "Make Branch Type")
-  ("Of"  larumbe/clearcase-update "Update file(s)")
-  ("Od"  clearcase-update-default-directory "Update current dir")
-  ("Ov"  clearcase-update-view "Update view")
 
   ("Zd" clearcase-dump "Dump files/views props" :column "Debug")
   ("Ze" clearcase-enable-tracing "Enable tracing")
