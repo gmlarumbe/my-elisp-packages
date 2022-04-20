@@ -33,10 +33,15 @@
 
 ;;;###autoload
 (defun larumbe/clearcase-checkin ()
-  "Clearcase checkin based on `current-buffer'/dired' context."
+  "Clearcase checkin based on `current-buffer'/dired' context.
+If in dired-mode but not pointing on a file, check-in current directory."
   (interactive)
   (if (string= major-mode "dired-mode")
-      (call-interactively #'clearcase-checkin-dired-files)
+      ;; Dired-mode
+      (if (dired-get-filename nil t)
+          (call-interactively #'clearcase-checkin-dired-files)
+        (call-interactively #'clearcase-dired-checkin-current-dir))
+    ;; Current buffer
     (call-interactively #'clearcase-checkin-current-buffer)))
 
 
@@ -204,7 +209,9 @@
 
 ;;;###autoload
 (defun larumbe/clearcase-hijack ()
-  "Clearcase hijack based on `current-buffer'/dired' context."
+  "Clearcase hijack based on `current-buffer'/dired' context.
+INFO: Only works on snapshot view.
+Hijacking takes a file outside direct Rational ClearCase control."
   (interactive)
   (if (string= major-mode "dired-mode")
       (call-interactively #'clearcase-hijack-dired-files)
@@ -213,7 +220,9 @@
 
 ;;;###autoload
 (defun larumbe/clearcase-unhijack ()
-  "Clearcase unhijack based on `current-buffer'/dired' context."
+  "Clearcase unhijack based on `current-buffer'/dired' context.
+INFO: Only works on snapshot view.
+Hijacking takes a file outside direct Rational ClearCase control."
   (interactive)
   (if (string= major-mode "dired-mode")
       (call-interactively #'clearcase-unhijack-dired-files)
@@ -381,7 +390,7 @@ Useful to be performed before running a merge with LATEST to predict merge confl
                            :hint  nil)
   ("f"  larumbe/clearcase-checkout "Check-out file(s)" :column "Check")     ; "Fetch"
   ("u"  larumbe/clearcase-uncheckout "Uncheck-out file(s)")                 ; "Unstage"
-  ("p"  larumbe/clearcase-checkin "Check-in file(s)")                       ; "Push"
+  ("p"  larumbe/clearcase-checkin "Check-in file(s)/dir")                   ; "Push"
   ("s"  clearcase-find-checkouts-in-current-view "List CO of Current View") ; "Status"
   ("SS" larumbe/clearcase-find-checkouts-current-dir-recursively "List CO of current dir")
   ("FF" larumbe/clearcase-dired-checkout-current-dir "Check-out dir")
@@ -531,6 +540,15 @@ Useful to be performed before running a merge with LATEST to predict merge confl
         (expand-file-name file))))) ; while lsco -recurse provides relatives paths
 
 
+(defun larumbe/clearcase-log-mode-find-author ()
+  "Find author of current error."
+  (let (author)
+    (save-excursion
+      (beginning-of-line)
+      (when (re-search-forward larumbe/clearcase-log-regexp (point-at-eol) t)
+        (setq author (match-string-no-properties 4))))))
+
+
 (defun larumbe/clearcase-log-ediff-pred ()
   "Use Ediff to compare the selected version against its predecessor in log mode."
   (interactive)
@@ -548,6 +566,19 @@ Useful to be performed before running a merge with LATEST to predict merge confl
     (if (string= predecessor "")
         (error "%s has no predecessor!" filename)
       (clearcase-diff-file-with-version filename predecessor))))
+
+
+(defun larumbe/clearcase-log-ediff-with-checkout ()
+  "Ediff with checked-out version.
+INFO: Requires that view of person who checked out the file is present in /view
+INFO: That was done at some point by executing graphical lsvtree and diff of another person
+checkedout file."
+  (interactive)
+  (let* ((filename (larumbe/clearcase-log-mode-find-version)) ; INFO: If over a checkedout file, only filename will be returned, no revision
+         (author (larumbe/clearcase-log-mode-find-author))
+         (other-view (completing-read "Select view: " (directory-files "/view/" nil author))))
+    (ediff-files filename (concat "/view/" other-view filename))))
+
 
 
 ;;;###autoload
@@ -574,6 +605,7 @@ Useful to be performed before running a merge with LATEST to predict merge confl
 (define-key clearcase-log-mode-map (kbd "e") #'larumbe/clearcase-log-ediff-pred)
 (define-key clearcase-log-mode-map (kbd "E") #'larumbe/clearcase-log-ediff-version)
 (define-key clearcase-log-mode-map (kbd "d") #'larumbe/clearcase-log-diff-pred)
+(define-key clearcase-log-mode-map (kbd "c") #'larumbe/clearcase-log-ediff-with-checkout)
 
 
 (provide 'clearcase-utils)
