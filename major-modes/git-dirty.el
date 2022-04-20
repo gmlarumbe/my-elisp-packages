@@ -48,7 +48,8 @@
   (interactive)
   (let (repo-name)
     (save-excursion
-      (when (not (eq 0 (skip-chars-forward "Repo ")))
+      (goto-char (point-at-bol))
+      (when (re-search-forward "^Repo " (point-at-eol) t)
         (setq repo-name (thing-at-point 'filename t))
         (setq repo-name (string-remove-suffix ":" repo-name))))
     (if repo-name
