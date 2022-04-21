@@ -570,9 +570,31 @@ INFO: That was done at some point by executing graphical lsvtree and diff of ano
 checkedout file."
   (interactive)
   (let* ((filename (larumbe/clearcase-log-mode-find-version)) ; INFO: If over a checkedout file, only filename will be returned, no revision
-         (author (larumbe/clearcase-log-mode-find-author))
-         (other-view (completing-read "Select view: " (directory-files "/view/" nil author))))
-    (ediff-files filename (concat "/view/" other-view filename))))
+         (view-dir-list (delete "" (split-string filename "/")))
+         (cur-view (if (string= (car view-dir-list) "view")
+                       (nth 1 view-dir-list) ; We are in other person's view already!
+                     (shell-command-to-string "cleartool pwv -short | tr -d '\\n'"))) ; We are in our own view
+         (other-views (delete "" (split-string (shell-command-to-string (concat "cleartool lsvtree " filename ; ct command
+                                                                                " | grep CHECKEDOUT"          ; filter checked out version line
+                                                                                " | awk '{ print $3 }'"       ; view name
+                                                                                " | tr -d '\"'"))             ; remove surrounding quotes
+                                               "\n")))
+         (other-view (if (cdr other-views) ; If more than one view available ask which revision to compare with
+                         (completing-read "View to compare with: " other-views nil t)
+                       (car other-views)))
+         (other-filename (concat "/view/" other-view filename)))
+    ;; Some error checking!
+    (when (string= cur-view other-view)
+      (error "Trying to compare files on the same view!"))
+    (unless (file-exists-p (concat "/view/" other-view))
+      (error "View: %s not present in current machine! Maybe try first with GUI Lsvtree to automatically create it?" other-view))
+    (unless (file-exists-p other-filename)
+      (error "File: %s not present in view %s! Are you sure it's a checked-out file?" other-filename))
+    (when (string-prefix-p "/view/" filename)
+      (unless (y-or-n-p (concat "Comparing file from views: " cur-view " / " other-view ". Proceed?"))
+        (error "Aborting")))
+    ;; Actual command
+    (ediff-files filename other-filename)))
 
 
 
