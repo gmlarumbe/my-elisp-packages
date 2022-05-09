@@ -7,6 +7,7 @@
 
 (require 'hydra)
 (require 'clearcase)
+(require 'compile)
 
 
 (defvar larumbe/clearcase-edcs-views nil
