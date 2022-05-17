@@ -385,6 +385,46 @@ Useful to be performed before running a merge with LATEST to predict merge confl
     (clearcase-ediff-file-with-version file "/main/LATEST")))
 
 
+;;;###autoload
+(defun larumbe/clearcase-checkin-multiple ()
+  "Clearcase checkin of many files at once.
+
+Based on `completing-read' for current checked-out files."
+  (interactive)
+  (let (checked-out-files check-in-files file cmd-args)
+    ;; Fetch list of checked-out files
+    (save-window-excursion
+      (clearcase-find-checkouts-in-current-view)
+      (with-temp-buffer
+        (insert-buffer-substring "*clearcase*")
+        (setq checked-out-files (split-string (buffer-substring-no-properties (point-min) (point-max)) "\n"))
+        (push "Done" checked-out-files)))
+    ;; Choose files to be checked-in
+    (while (not (string= (setq file (completing-read "Check in files: " checked-out-files)) "Done"))
+      (push file check-in-files)
+      (delete file checked-out-files))
+    ;; Check-in or abort
+    (if (yes-or-no-p (concat "Checking in following files:\n\n" (mapconcat #'identity check-in-files "\n") "\n\nContinue?\n"))
+        (progn
+          ;; INFO: Order of pushing is relevant in the code, since files must be at the end and -c "comment" at the beginning of the list
+          (mapcar (lambda (elm) (push elm cmd-args)) check-in-files)
+          (push (read-string "Check-in comment: ") cmd-args)
+          (push "-c" cmd-args)
+          ;; (larumbe/print-elements-of-list-of-strings cmd-args) ; TODO: Remove once is tested
+          (clearcase-utl-populate-and-view-buffer
+           "*clearcase*"
+           nil
+           (lambda ()
+             (clearcase-ct-do-cleartool-command "lshistory" ; TODO: Change with "ci" once I have something to test it over (with some backups)
+                                                nil
+                                                'unused
+                                                cmd-args))))
+      ;; Else, abort
+      (message "Aborting!"))))
+
+
+
+
 
 
 (defhydra hydra-clearcase (:color blue
@@ -392,12 +432,13 @@ Useful to be performed before running a merge with LATEST to predict merge confl
   ("f"  larumbe/clearcase-checkout "Check-out file(s)" :column "Check")     ; "Fetch"
   ("u"  larumbe/clearcase-uncheckout "Uncheck-out file(s)")                 ; "Unstage"
   ("p"  larumbe/clearcase-checkin "Check-in file(s)/dir")                   ; "Push"
+  ("P"  larumbe/clearcase-checkin-multiple "Check-in many files at once")   ; "Push multiple"
   ("s"  clearcase-find-checkouts-in-current-view "List CO of Current View") ; "Status"
-  ("S" larumbe/clearcase-find-checkouts-current-dir-recursively "List CO of current dir")
-  ("F" larumbe/clearcase-dired-checkout-current-dir "Check-out dir")
-  ("U" larumbe/clearcase-dired-uncheckout-current-dir "Uncheck-out dir")
+  ("S"  larumbe/clearcase-find-checkouts-current-dir-recursively "List CO of current dir")
+  ("F"  larumbe/clearcase-dired-checkout-current-dir "Check-out dir")
+  ("U"  larumbe/clearcase-dired-uncheckout-current-dir "Uncheck-out dir")
   ("CE" larumbe/clearcase-edit-checkout-comment "Edit CO comment")
-  ("PP" larumbe/clearcase-edcs-edit "Edit Config-Spec")
+  ("CS" larumbe/clearcase-edcs-edit "Edit Config-Spec")
 
   ("e"  larumbe/clearcase-ediff-pred "Ediff predecesor" :column "Diff")
   ("E"  larumbe/clearcase-ediff-named-version "Ediff named version")
@@ -458,7 +499,9 @@ Useful to be performed before running a merge with LATEST to predict merge confl
   (interactive)
   (let ((file (if (string= major-mode "dired-mode")
                   dired-directory
-                buffer-file-name)))
+                (if buffer-file-name
+                    buffer-file-name
+                  (error "Not visiting a file!")))))
     (unless (clearcase-file-is-in-mvfs-p file)
       (error "Not in a ClearCase object!"))
     (call-interactively #'hydra-clearcase/body)))
