@@ -406,16 +406,14 @@ Based on `completing-read' for current checked-out files."
     ;; Check-in or abort
     (if (yes-or-no-p (concat "Checking in following files:\n\n" (mapconcat #'identity check-in-files "\n") "\n\nContinue?\n"))
         (progn
-          ;; INFO: Order of pushing is relevant in the code, since files must be at the end and -c "comment" at the beginning of the list
           (mapcar (lambda (elm) (push elm cmd-args)) check-in-files)
-          (push (read-string "Check-in comment: ") cmd-args)
+          (push (concat "\"" (read-string "Check-in comment: ") "\"") cmd-args)
           (push "-c" cmd-args)
-          ;; (larumbe/print-elements-of-list-of-strings cmd-args) ; TODO: Remove once is tested
           (clearcase-utl-populate-and-view-buffer
            "*clearcase*"
            nil
            (lambda ()
-             (clearcase-ct-do-cleartool-command "lshistory" ; TODO: Change with "ci" once I have something to test it over (with some backups)
+             (clearcase-ct-do-cleartool-command "ci"
                                                 nil
                                                 'unused
                                                 cmd-args))))
