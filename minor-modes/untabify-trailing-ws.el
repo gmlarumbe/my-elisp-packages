@@ -19,14 +19,17 @@
 ;;; Code:
 
 
-(defvar untabify-delete-trailing-whitespace t) ; Default initial value
+(defvar untabify-trailing-delete-whitespace t) ; Default initial value
+(defvar untabify-trailing-disable-on-files nil
+  "List of files where Untabify/Delete trailing whitespace should not be executed.")
 
 
 (defun untabify-trailing-whitespace ()
   "Untabify and delete trailing whitespace depending on MAJOR-MODE of current buffer.
 Meant to be used as a wrapper for write-file-functions hook."
   (interactive)
-  (unless (string-match "makefile-" (format "%s" major-mode)) ; Do not untabify `makefile-mode'
+  (unless (or (string-match "makefile-" (format "%s" major-mode)) ; Do not untabify `makefile-mode'
+              (member buffer-file-name (mapcar #'expand-file-name untabify-trailing-disable-on-files)))
     (untabify (point-min) (point-max))
     (delete-trailing-whitespace (point-min) (point-max))))
 
@@ -37,13 +40,13 @@ Meant to be used as a wrapper for write-file-functions hook."
   :global t
   (if untabify-trailing-ws-mode
       (progn   ;; Enable
-        (setq untabify-delete-trailing-whitespace t)
+        (setq untabify-trailing-delete-whitespace t)
         (add-hook 'write-file-functions #'untabify-trailing-whitespace)
-        (message "Untabify set to: %s" untabify-delete-trailing-whitespace))
+        (message "Untabify set to: %s" untabify-trailing-delete-whitespace))
     ;; Disable
-    (setq untabify-delete-trailing-whitespace nil)
+    (setq untabify-trailing-delete-whitespace nil)
     (remove-hook 'write-file-functions #'untabify-trailing-whitespace)
-    (message "Untabify set to: %s" untabify-delete-trailing-whitespace)))
+    (message "Untabify set to: %s" untabify-trailing-delete-whitespace)))
 
 
 
