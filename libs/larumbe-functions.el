@@ -116,28 +116,6 @@ push to the related marker-stack instead of the xref default."
   (set-mark-command 4))
 
 
-;;;###autoload
-(defun larumbe/xref-find-definitions-at-point-dwim ()
-  "Find definition of symbol at point.
-If pointing a file, visit that file instead.
-
-INFO: Will use global/ggtags as a backend if configured."
-  (interactive)
-  (if (file-exists-p (thing-at-point 'filename))
-      (larumbe/find-file-at-point)
-    (xref-find-definitions (thing-at-point 'symbol))))
-
-
-;;;###autoload
-(defun larumbe/xref-find-reference-at-point ()
-  "Find reference of symbol at point.
-
-INFO: Will use global/ggtags as a backend if configured."
-  (interactive)
-  (xref-find-references (thing-at-point 'symbol)))
-
-
-
 ;;;; Editing
 ;;;###autoload
 (defun larumbe/copy-region-or-symbol-at-point ()
