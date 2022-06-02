@@ -675,12 +675,19 @@ checkedout file."
 
 
 ;;;; Check-out mode
-(defvar larumbe/clearcase-checkout-filepath-regexp "\\(?1:[/_\.a-zA-Z0-9]+/\\)\\(?2:[_a-zA-Z0-9]+\\)\\(?3:\.\\)\\(?4:[a-z]+\\)")
-(setq larumbe/clearcase-checkout-font-lock-defaults ; Reuse clearcase-log faces
-  `(((,larumbe/clearcase-checkout-filepath-regexp . ((1 'larumbe/font-lock-cc-log-date-time-face)   ; path
-                                                     (2 'larumbe/font-lock-cc-log-author-face)      ; filename
-                                                     (3 'larumbe/font-lock-cc-log-separator-face)   ; .
-                                                     (4 'larumbe/font-lock-cc-log-action-face)))))) ; ext
+(defvar larumbe/clearcase-checkout-filepath-verilog-regexp "\\(?1:[/_\.a-zA-Z0-9]+/\\)\\(?2:[_a-zA-Z0-9]+\\)\\(?3:\.\\)\\(?4:s?vh?+\\)$")
+(defvar larumbe/clearcase-checkout-filepath-regexp         "\\(?1:[/_\.a-zA-Z0-9]+/\\)\\(?2:[_a-zA-Z0-9]+\\)\\(?3:\.\\)\\(?4:[a-z]+\\)")
+
+;; INFO: Verilog regexp must have precedence over generic regexp since it's a subgroup
+(defvar larumbe/clearcase-checkout-font-lock-defaults ; Reuse clearcase-log faces
+  `(((,larumbe/clearcase-checkout-filepath-verilog-regexp . ((1 'larumbe/font-lock-cc-log-date-time-face) ; path
+                                                             (2 'larumbe/font-lock-cc-log-file-face)      ; filename
+                                                             (3 'larumbe/font-lock-cc-log-separator-face) ; .
+                                                             (4 'larumbe/font-lock-cc-log-action-face)))  ; ext
+     (,larumbe/clearcase-checkout-filepath-regexp . ((1 'larumbe/font-lock-cc-log-date-time-face)
+                                                     (2 'larumbe/font-lock-cc-log-author-face)
+                                                     (3 'larumbe/font-lock-cc-log-separator-face)
+                                                     (4 'larumbe/font-lock-cc-log-action-face))))))
 
 (define-derived-mode clearcase-checkout-mode special-mode
   (setq font-lock-defaults larumbe/clearcase-checkout-font-lock-defaults)
