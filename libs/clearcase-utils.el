@@ -421,6 +421,12 @@ Based on `completing-read' for current checked-out files."
       (message "Aborting!"))))
 
 
+;;;###autoload
+(defun larumbe/clearcase-find-checkouts-in-current-view ()
+  "Wrapper around `clearcase-find-checkouts-in-current-view' that enables `clearcase-checkout-mode'."
+  (interactive)
+  (clearcase-find-checkouts-in-current-view)
+  (clearcase-checkout-mode))
 
 
 
@@ -431,7 +437,7 @@ Based on `completing-read' for current checked-out files."
   ("u"  larumbe/clearcase-uncheckout "Uncheck-out file(s)")                 ; "Unstage"
   ("p"  larumbe/clearcase-checkin "Check-in file(s)/dir")                   ; "Push"
   ("P"  larumbe/clearcase-checkin-multiple "Check-in many files at once")   ; "Push multiple"
-  ("s"  clearcase-find-checkouts-in-current-view "List CO of Current View") ; "Status"
+  ("s"  larumbe/clearcase-find-checkouts-in-current-view "List CO of Current View") ; "Status"
   ("S"  larumbe/clearcase-find-checkouts-current-dir-recursively "List CO of current dir")
   ("F"  larumbe/clearcase-dired-checkout-current-dir "Check-out dir")
   ("U"  larumbe/clearcase-dired-uncheckout-current-dir "Uncheck-out dir")
@@ -665,6 +671,43 @@ checkedout file."
 (define-key clearcase-log-mode-map (kbd "E") #'larumbe/clearcase-log-ediff-version)
 (define-key clearcase-log-mode-map (kbd "d") #'larumbe/clearcase-log-diff-pred)
 (define-key clearcase-log-mode-map (kbd "c") #'larumbe/clearcase-log-ediff-with-checkout)
+
+
+
+;;;; Check-out mode
+(defvar larumbe/clearcase-checkout-filepath-regexp "\\(?1:[/_\.a-zA-Z0-9]+/\\)\\(?2:[_a-zA-Z0-9]+\\)\\(?3:\.\\)\\(?4:[a-z]+\\)")
+(setq larumbe/clearcase-checkout-font-lock-defaults ; Reuse clearcase-log faces
+  `(((,larumbe/clearcase-checkout-filepath-regexp . ((1 'larumbe/font-lock-cc-log-date-time-face)   ; path
+                                                     (2 'larumbe/font-lock-cc-log-author-face)      ; filename
+                                                     (3 'larumbe/font-lock-cc-log-separator-face)   ; .
+                                                     (4 'larumbe/font-lock-cc-log-action-face)))))) ; ext
+
+(define-derived-mode clearcase-checkout-mode special-mode
+  (setq font-lock-defaults larumbe/clearcase-checkout-font-lock-defaults)
+  (setq mode-name "CC-Checkout"))
+
+(defun larumbe/clearcase-checkout-next-line (&optional arg)
+  (interactive "P")
+  (goto-char (point-at-bol))
+  (if arg
+      (forward-line -1)
+    (forward-line))
+  (looking-at larumbe/clearcase-checkout-filepath-regexp)
+  (goto-char (match-beginning 2)))
+
+(defun larumbe/clearcase-checkout-prev-line ()
+  (interactive)
+  (larumbe/clearcase-checkout-next-line -1))
+
+
+(define-key clearcase-checkout-mode-map (kbd "C-o") #'(lambda () (interactive) (ffap-other-window (thing-at-point 'filename))))
+(define-key clearcase-checkout-mode-map (kbd "o")   #'(lambda () (interactive) (ffap-other-window (thing-at-point 'filename))))
+(define-key clearcase-checkout-mode-map (kbd "C-j") #'(lambda () (interactive) (ffap-other-window (thing-at-point 'filename))))
+(define-key clearcase-checkout-mode-map (kbd "RET") #'(lambda () (interactive) (ffap-other-window (thing-at-point 'filename))))
+(define-key clearcase-checkout-mode-map (kbd "k")   #'(lambda () (interactive) (quit-window 'kill)))
+(define-key clearcase-checkout-mode-map (kbd "p") #'larumbe/clearcase-checkout-prev-line)
+(define-key clearcase-checkout-mode-map (kbd "n") #'larumbe/clearcase-checkout-next-line)
+
 
 
 (provide 'clearcase-utils)
