@@ -1777,7 +1777,7 @@ the user to edit."
               (message "Finding checkouts...done")
 
               (clearcase-utl-populate-and-view-buffer
-               "*clearcase*"
+               "*clearcase-co*"
                (list text)
                (function (lambda (s)
                            (insert s))))))))))
