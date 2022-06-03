@@ -296,13 +296,14 @@ If called with prefix arg, call original command to fetch list of available view
   "List all view private files."
   (interactive)
   (clearcase-utl-populate-and-view-buffer
-   "*clearcase*"
+   "*clearcase*" ; DANGER: For some strange reason, if set to "*clearcase-lsprivate*" the result goes to *clearcase* instead
    nil
    (lambda ()
      (clearcase-ct-do-cleartool-command "lsprivate"
                                         nil
                                         'unused
-                                        nil))))
+                                        nil)))
+  (clearcase-lsprivate-mode))
 
 
 ;;;###autoload
@@ -390,7 +391,7 @@ Useful to be performed before running a merge with LATEST to predict merge confl
   "Similar to `clearcase-assert-file-ok-to-checkin' but making more checks:
 - Throw an error if file is not checkedout and user is not the owner
 - Throw an error if file is checkedout in reserved mode by someone else
-- Return warning message in case the file needs to be merged with LATEST
+- Return warning message in case the file needs to be merged with LATEST or checkedout by someone else
 - Return nil if everything's fine
 "
   (let (co-reserved
@@ -398,20 +399,26 @@ Useful to be performed before running a merge with LATEST to predict merge confl
         existing-versions-int
         latest-version
         pred-version
-        merge-needed)
+        merge-needed
+        co-others
+        warning-string)
     (unless (executable-find "cleartool")
       (error "Cleartool not found in $PATH!"))
     ;; clearcase.el API: checks if file is checked-out and I am the owner, otherwise throws an error
     (clearcase-assert-file-ok-to-checkin file)
-    ;; Check if other people have checked out the same file and if it was a reserved checkout
+    ;; Check if other people have checked out the same file and if it was a reserved/unreserved checkout
     (setq co-reserved (shell-command-to-string (concat "cleartool lsco " file " | grep -v " (user-login-name))))
     (when (not (string= "" co-reserved))
       (with-temp-buffer
         (insert co-reserved)
+        (goto-char (point-min))
         (save-excursion
-          (goto-char (point-min))
           (when (re-search-forward "\(reserved\)" nil t)
-            (error "Someone else has a RESERVED checkout on %s" file)))))
+            (error "Someone else has a RESERVED checkout on %s" file)))
+        (save-excursion
+          (when (re-search-forward "\\(?1:[a-z]+\\)\s+checkout version.*\(unreserved\)" nil t)
+            (setq co-others t)
+            (setq warning-string (concat warning-string (format "File %s checkedout by %s\n" file (match-string-no-properties 1))))))))
     ;; Check if a merge is needed before checking in (compare LATEST with the one in the buffer)
     (setq existing-versions-string (directory-files (concat file "@@/main/") nil "^[0-9]+$"))
     (setq existing-versions-int (mapcar #'string-to-number existing-versions-string))
@@ -419,17 +426,20 @@ Useful to be performed before running a merge with LATEST to predict merge confl
     (setq pred-version (string-to-number (string-remove-prefix "/main/" (clearcase-fprop-predecessor-version file))))
     (when (> latest-version pred-version)
       (setq merge-needed t))
+    (when merge-needed
+      (setq warning-string (concat warning-string (format "File %s requires merge\n" file))))
     ;; Return value
-    (if merge-needed
-        (format "File %s requires merge" file)
+    (if (or merge-needed
+            co-others)
+        warning-string
       nil)))
 
 
 (defun larumbe/clearcase-checkin-file-list (files)
   "Check-in list of strings FILES at once."
   (let (cmd-args merge-warnings)
-    (when (setq merge-warnings (mapconcat #'larumbe/clearcase-issues-to-checkin files "\n"))
-      (unless (yes-or-no-p (concat "Following files need merge: \n\n" merge-warnings "\n\nContinue?\n"))
+    (unless (string= "" (setq merge-warnings (mapconcat #'larumbe/clearcase-issues-to-checkin files "\n")))
+      (unless (yes-or-no-p (concat "Warnings: \n\n" merge-warnings "\nContinue?\n"))
         (user-error "Aborting!")))
     (if (yes-or-no-p (concat "Checking in following files:\n\n" (mapconcat #'identity files "\n") "\n\nContinue?\n"))
         (progn
@@ -738,7 +748,62 @@ checkedout file."
 
 
 
-;;;; Check-out mode
+;;;; Dired-like
+(defun larumbe/clearcase-next-line (&optional arg)
+  (interactive "P")
+  (goto-char (point-at-bol))
+  (if arg
+      (forward-line -1)
+    (forward-line))
+  (looking-at larumbe/clearcase-checkout-filepath-regexp)
+  (goto-char (match-beginning 2)))
+
+(defun larumbe/clearcase-prev-line ()
+  (interactive)
+  (larumbe/clearcase-next-line -1))
+
+(defun larumbe/clearcase-mark-file ()
+  (interactive)
+  (overlay-put (make-overlay (point-at-bol) (point-at-eol)) 'face 'highlight)
+  (add-to-list 'larumbe/clearcase-marked-files (thing-at-point 'filename t))
+  (larumbe/clearcase-next-line))
+
+(defun larumbe/clearcase-unmark-file ()
+  (interactive)
+  (if (overlays-in (point-at-bol) (point-at-eol))
+      (progn
+        (remove-overlays (point-at-bol) (point-at-eol))
+        (setq larumbe/clearcase-marked-files (delete (thing-at-point 'filename t) larumbe/clearcase-marked-files))
+        (larumbe/clearcase-next-line))
+    ;; File was not marked
+    (message "File was not marked")))
+
+(defun larumbe/clearcase-mark-deletion-file ()
+  (interactive)
+  (if (save-excursion
+        (goto-char (point-at-bol))
+        (looking-at larumbe/clearcase-lsprivate-filepath-cc-checkedout-re))
+      (message "Trying to delete a checked-out file!")
+    ;; Else
+    (overlay-put (make-overlay (point-at-bol) (point-at-eol)) 'face '(:foreground "red"))
+    (add-to-list 'larumbe/clearcase-marked-files (thing-at-point 'filename t))
+    (larumbe/clearcase-next-line)))
+
+(defun larumbe/clearcase-delete-marked-files ()
+  (interactive)
+  (unless larumbe/clearcase-marked-files
+    (user-error "No files marked for deletion"))
+  (when (y-or-n-p (format "About to delete %0d files, continue? " (length larumbe/clearcase-marked-files)))
+    (mapc (lambda (file)
+            (if (file-directory-p file)
+                (delete-directory file t)
+              (delete-file file)))
+          larumbe/clearcase-marked-files)
+    (setq larumbe/clearcase-marked-files nil)
+    (larumbe/clearcase-lsprivate-revert-buffer)))
+
+
+;;;;; checkout
 (defvar larumbe/clearcase-checkout-filepath-verilog-regexp "\\(?1:[/_\.a-zA-Z0-9]+/\\)\\(?2:[_a-zA-Z0-9]+\\)\\(?3:\.\\)\\(?4:s?vh?+\\)$")
 (defvar larumbe/clearcase-checkout-filepath-regexp         "\\(?1:[/_\.a-zA-Z0-9]+/\\)\\(?2:[_a-zA-Z0-9]+\\)\\(?3:\.\\)\\(?4:[a-z]+\\)")
 
@@ -753,46 +818,25 @@ checkedout file."
                                                      (3 'larumbe/font-lock-cc-log-separator-face)
                                                      (4 'larumbe/font-lock-cc-log-action-face))))))
 
-;;;###autoload
-(define-derived-mode clearcase-checkout-mode special-mode
-  (setq font-lock-defaults larumbe/clearcase-checkout-font-lock-defaults)
-  (defvar-local clearcase-checkout-marked-files nil)
-  (setq-local revert-buffer-function #'larumbe/clearcase-checkout-revert-buffer)
-  (setq mode-name "CC-Checkout"))
 
-(defun larumbe/clearcase-checkout-next-line (&optional arg)
-  (interactive "P")
-  (goto-char (point-at-bol))
-  (if arg
-      (forward-line -1)
-    (forward-line))
-  (looking-at larumbe/clearcase-checkout-filepath-regexp)
-  (goto-char (match-beginning 2)))
+(defvar clearcase-checkout-mode-map (make-sparse-keymap))
+(define-key clearcase-checkout-mode-map (kbd "C-o") #'(lambda () (interactive) (find-file-other-window (thing-at-point 'filename))))
+(define-key clearcase-checkout-mode-map (kbd "o")   #'(lambda () (interactive) (find-file-other-window (thing-at-point 'filename))))
+(define-key clearcase-checkout-mode-map (kbd "C-j") #'(lambda () (interactive) (find-file-other-window (thing-at-point 'filename))))
+(define-key clearcase-checkout-mode-map (kbd "RET") #'(lambda () (interactive) (find-file-other-window (thing-at-point 'filename))))
+(define-key clearcase-checkout-mode-map (kbd "k")   #'(lambda () (interactive) (quit-window 'kill)))
+(define-key clearcase-checkout-mode-map (kbd "p") #'larumbe/clearcase-prev-line)
+(define-key clearcase-checkout-mode-map (kbd "n") #'larumbe/clearcase-next-line)
+(define-key clearcase-checkout-mode-map (kbd "m") #'larumbe/clearcase-mark-file)
+(define-key clearcase-checkout-mode-map (kbd "u") #'larumbe/clearcase-unmark-file)
+(define-key clearcase-checkout-mode-map (kbd "P") #'larumbe/clearcase-checkout-checkin-marked)
+(define-key clearcase-checkout-mode-map (kbd "l") #'recenter-top-bottom)
 
-(defun larumbe/clearcase-checkout-prev-line ()
-  (interactive)
-  (larumbe/clearcase-checkout-next-line -1))
-
-(defun larumbe/clearcase-checkout-mark-file ()
-  (interactive)
-  (overlay-put (make-overlay (point-at-bol) (point-at-eol)) 'face 'highlight)
-  (add-to-list 'clearcase-checkout-marked-files (thing-at-point 'filename t))
-  (larumbe/clearcase-checkout-next-line))
-
-(defun larumbe/clearcase-checkout-unmark-file ()
-  (interactive)
-  (if (overlays-in (point-at-bol) (point-at-eol))
-      (progn
-        (remove-overlays (point-at-bol) (point-at-eol))
-        (setq clearcase-checkout-marked-files (delete (thing-at-point 'filename t) clearcase-checkout-marked-files))
-        (larumbe/clearcase-checkout-next-line))
-    ;; File was not marked
-    (message "File was not marked")))
 
 (defun larumbe/clearcase-checkout-revert-buffer (&optional ignore-auto noconfirm preserve-modes)
   (interactive)
   (let ((pos (point)))
-    (when (and clearcase-checkout-marked-files
+    (when (and larumbe/clearcase-marked-files
                (not (y-or-n-p "Warning: Marked files in buffer! Reverting will reset them before checkout. Continue? ")))
       (user-error "Aborting revert..."))
     (save-window-excursion
@@ -803,21 +847,75 @@ checkedout file."
 
 (defun larumbe/clearcase-checkout-checkin-marked ()
   (interactive)
-  (larumbe/clearcase-checkin-file-list clearcase-checkout-marked-files)
+  (larumbe/clearcase-checkin-file-list larumbe/clearcase-marked-files)
   (remove-overlays (point-min) (point-max))
-  (setq clearcase-checkout-marked-files nil))
+  (setq larumbe/clearcase-marked-files nil))
 
 
-(define-key clearcase-checkout-mode-map (kbd "C-o") #'(lambda () (interactive) (find-file-other-window (thing-at-point 'filename))))
-(define-key clearcase-checkout-mode-map (kbd "o")   #'(lambda () (interactive) (find-file-other-window (thing-at-point 'filename))))
-(define-key clearcase-checkout-mode-map (kbd "C-j") #'(lambda () (interactive) (find-file-other-window (thing-at-point 'filename))))
-(define-key clearcase-checkout-mode-map (kbd "RET") #'(lambda () (interactive) (find-file-other-window (thing-at-point 'filename))))
-(define-key clearcase-checkout-mode-map (kbd "k")   #'(lambda () (interactive) (quit-window 'kill)))
-(define-key clearcase-checkout-mode-map (kbd "p") #'larumbe/clearcase-checkout-prev-line)
-(define-key clearcase-checkout-mode-map (kbd "n") #'larumbe/clearcase-checkout-next-line)
-(define-key clearcase-checkout-mode-map (kbd "m") #'larumbe/clearcase-checkout-mark-file)
-(define-key clearcase-checkout-mode-map (kbd "u") #'larumbe/clearcase-checkout-unmark-file)
-(define-key clearcase-checkout-mode-map (kbd "P") #'larumbe/clearcase-checkout-checkin-marked)
+
+;;;###autoload
+(define-derived-mode clearcase-checkout-mode special-mode
+  (defvar-local larumbe/clearcase-marked-files nil)
+  (setq font-lock-defaults larumbe/clearcase-checkout-font-lock-defaults)
+  (setq-local revert-buffer-function #'larumbe/clearcase-checkout-revert-buffer)
+  (setq mode-name "CC-Checkout"))
+
+
+;;;;; lsprivate
+(defvar larumbe/clearcase-lsprivate-filepath-temp-re          "\\(?1:[/_\.a-zA-Z0-9]+/\\)\\(?2:[_a-zA-Z0-9]+\\)\\(?3:\.\\)\\(?4:[a-z]+~\\)")
+(defvar larumbe/clearcase-lsprivate-filepath-cc-keep-re       "\\(?1:[/_\.a-zA-Z0-9]+/\\)\\(?2:[_a-zA-Z0-9\.]+\\)\\(?3:\.\\(keep[\.0-9]*\\)\\|\\(contrib[\.0-9]*\\)$\\)")
+(defvar larumbe/clearcase-lsprivate-filepath-cc-checkedout-re "\\(?1:[/_\.a-zA-Z0-9]+/\\)\\(?2:[\._a-zA-Z0-9]+\\)\s+\\(?3:\\[checkedout\\]\\)")
+(defvar larumbe/clearcase-lsprivate-filepath-regexp           "\\(?1:[/_\.a-zA-Z0-9]+/\\)\\(?2:[_a-zA-Z0-9]+\\)\\.\\(?3:[a-zA-Z0-9]+\\)")
+(defvar larumbe/clearcase-lsprivate-filepath-regexp-no-ext    "\\(?1:[/_\.a-zA-Z0-9]+/\\)\\(?2:[_a-zA-Z0-9]+\\)")
+
+(defvar larumbe/clearcase-lsprivate-font-lock-defaults ; Reuse clearcase-log faces
+  `(((,larumbe/clearcase-lsprivate-filepath-temp-re          . ((1 'larumbe/font-lock-cc-log-date-time-face) ; path
+                                                                (2 'larumbe/font-lock-cc-log-author-face)    ; filename
+                                                                (3 'larumbe/font-lock-cc-log-separator-face) ; .
+                                                                (4 'larumbe/font-lock-cc-log-action-face)))  ; ext
+     (,larumbe/clearcase-lsprivate-filepath-cc-keep-re       . ((1 'larumbe/font-lock-cc-log-date-time-face) ; path
+                                                                (2 'font-lock-function-name-face)            ; filename
+                                                                (3 'larumbe/font-lock-cc-log-action-face)))  ; rest
+     (,larumbe/clearcase-lsprivate-filepath-cc-checkedout-re . ((1 'larumbe/font-lock-cc-log-date-time-face) ; path
+                                                                (2 'font-lock-builtin-face)                  ; filename
+                                                                (3 'larumbe/font-lock-cc-log-action-face)))
+     (,larumbe/clearcase-lsprivate-filepath-regexp           . ((1 'larumbe/font-lock-cc-log-date-time-face) ; path
+                                                                (2 'larumbe/font-lock-cc-log-file-face)      ; filename
+                                                                (3 'larumbe/font-lock-cc-log-action-face)))  ; ext
+     (,larumbe/clearcase-lsprivate-filepath-regexp-no-ext    . ((1 'larumbe/font-lock-cc-log-date-time-face) ; path
+                                                                (2 'larumbe/font-lock-cc-log-file-face)))    ; filename
+     )))
+
+
+(defvar clearcase-lsprivate-mode-map (make-sparse-keymap))
+(define-key clearcase-lsprivate-mode-map (kbd "C-o") #'(lambda () (interactive) (find-file-other-window (thing-at-point 'filename))))
+(define-key clearcase-lsprivate-mode-map (kbd "o")   #'(lambda () (interactive) (find-file-other-window (thing-at-point 'filename))))
+(define-key clearcase-lsprivate-mode-map (kbd "C-j") #'(lambda () (interactive) (find-file-other-window (thing-at-point 'filename))))
+(define-key clearcase-lsprivate-mode-map (kbd "RET") #'(lambda () (interactive) (find-file-other-window (thing-at-point 'filename))))
+(define-key clearcase-lsprivate-mode-map (kbd "k")   #'(lambda () (interactive) (quit-window 'kill)))
+(define-key clearcase-lsprivate-mode-map (kbd "p") #'larumbe/clearcase-prev-line)
+(define-key clearcase-lsprivate-mode-map (kbd "n") #'larumbe/clearcase-next-line)
+(define-key clearcase-lsprivate-mode-map (kbd "d") #'larumbe/clearcase-mark-deletion-file)
+(define-key clearcase-lsprivate-mode-map (kbd "u") #'larumbe/clearcase-unmark-file)
+(define-key clearcase-lsprivate-mode-map (kbd "x") #'larumbe/clearcase-delete-marked-files)
+(define-key clearcase-lsprivate-mode-map (kbd "l") #'recenter-top-bottom)
+
+
+(defun larumbe/clearcase-lsprivate-revert-buffer (&optional ignore-auto noconfirm preserve-modes)
+  (interactive)
+  (let ((pos (point)))
+    (save-window-excursion
+      (larumbe/clearcase-lsprivate))
+    (if (> pos (point-max))
+        (goto-char (point-min))
+      (goto-char pos))))
+
+
+;;;###autoload
+(define-derived-mode clearcase-lsprivate-mode special-mode
+  (setq font-lock-defaults larumbe/clearcase-lsprivate-font-lock-defaults)
+  (setq-local revert-buffer-function #'larumbe/clearcase-lsprivate-revert-buffer)
+  (setq mode-name "CC-PrivateFiles"))
 
 
 
