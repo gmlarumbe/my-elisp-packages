@@ -385,28 +385,14 @@ Useful to be performed before running a merge with LATEST to predict merge confl
     (clearcase-ediff-file-with-version file "/main/LATEST")))
 
 
-;;;###autoload
-(defun larumbe/clearcase-checkin-multiple ()
-  "Clearcase checkin of many files at once.
 
-Based on `completing-read' for current checked-out files."
+(defun larumbe/clearcase-checkin-file-list (files)
+  "Check-in list of strings FILES at once."
   (interactive)
-  (let (checked-out-files check-in-files file cmd-args)
-    ;; Fetch list of checked-out files
-    (save-window-excursion
-      (clearcase-find-checkouts-in-current-view)
-      (with-temp-buffer
-        (insert-buffer-substring "*clearcase*")
-        (setq checked-out-files (split-string (buffer-substring-no-properties (point-min) (point-max)) "\n"))
-        (push "Done" checked-out-files)))
-    ;; Choose files to be checked-in
-    (while (not (string= (setq file (completing-read "Check in files: " checked-out-files)) "Done"))
-      (push file check-in-files)
-      (delete file checked-out-files))
-    ;; Check-in or abort
-    (if (yes-or-no-p (concat "Checking in following files:\n\n" (mapconcat #'identity check-in-files "\n") "\n\nContinue?\n"))
+  (let (cmd-args)
+    (if (yes-or-no-p (concat "Checking in following files:\n\n" (mapconcat #'identity files "\n") "\n\nContinue?\n"))
         (progn
-          (mapcar (lambda (elm) (push elm cmd-args)) check-in-files)
+          (mapcar (lambda (elm) (push elm cmd-args)) files)
           (push (concat "\"" (read-string "Check-in comment: ") "\"") cmd-args)
           (push "-c" cmd-args)
           (clearcase-utl-populate-and-view-buffer
@@ -419,6 +405,28 @@ Based on `completing-read' for current checked-out files."
                                                 cmd-args))))
       ;; Else, abort
       (message "Aborting!"))))
+
+
+;;;###autoload
+(defun larumbe/clearcase-checkin-multiple ()
+  "Clearcase checkin of many files at once.
+
+Based on `completing-read' for current checked-out files."
+  (interactive)
+  (let (checked-out-files check-in-files file)
+    ;; Fetch list of checked-out files
+    (save-window-excursion
+      (clearcase-find-checkouts-in-current-view)
+      (with-temp-buffer
+        (insert-buffer-substring "*clearcase*")
+        (setq checked-out-files (split-string (buffer-substring-no-properties (point-min) (point-max)) "\n"))
+        (push "Done" checked-out-files)))
+    ;; Choose files to be checked-in
+    (while (not (string= (setq file (completing-read "Check in files: " checked-out-files)) "Done"))
+      (push file check-in-files)
+      (delete file checked-out-files))
+    ;; Check-in or abort
+    (larumbe/clearcase-checkin-file-list check-in-files)))
 
 
 ;;;###autoload
@@ -689,8 +697,11 @@ checkedout file."
                                                      (3 'larumbe/font-lock-cc-log-separator-face)
                                                      (4 'larumbe/font-lock-cc-log-action-face))))))
 
+;;;###autoload
 (define-derived-mode clearcase-checkout-mode special-mode
   (setq font-lock-defaults larumbe/clearcase-checkout-font-lock-defaults)
+  (defvar-local clearcase-checkout-marked-files nil)
+  (setq-local revert-buffer-function #'larumbe/clearcase-checkout-revert-buffer)
   (setq mode-name "CC-Checkout"))
 
 (defun larumbe/clearcase-checkout-next-line (&optional arg)
@@ -706,14 +717,51 @@ checkedout file."
   (interactive)
   (larumbe/clearcase-checkout-next-line -1))
 
+(defun larumbe/clearcase-checkout-mark-file ()
+  (interactive)
+  (overlay-put (make-overlay (point-at-bol) (point-at-eol)) 'face 'highlight)
+  (add-to-list 'clearcase-checkout-marked-files (thing-at-point 'filename t))
+  (larumbe/clearcase-checkout-next-line))
 
-(define-key clearcase-checkout-mode-map (kbd "C-o") #'(lambda () (interactive) (ffap-other-window (thing-at-point 'filename))))
-(define-key clearcase-checkout-mode-map (kbd "o")   #'(lambda () (interactive) (ffap-other-window (thing-at-point 'filename))))
-(define-key clearcase-checkout-mode-map (kbd "C-j") #'(lambda () (interactive) (ffap-other-window (thing-at-point 'filename))))
-(define-key clearcase-checkout-mode-map (kbd "RET") #'(lambda () (interactive) (ffap-other-window (thing-at-point 'filename))))
+(defun larumbe/clearcase-checkout-unmark-file ()
+  (interactive)
+  (if (overlays-in (point-at-bol) (point-at-eol))
+      (progn
+        (remove-overlays (point-at-bol) (point-at-eol))
+        (setq clearcase-checkout-marked-files (delete (thing-at-point 'filename t) clearcase-checkout-marked-files))
+        (larumbe/clearcase-checkout-next-line))
+    ;; File was not marked
+    (message "File was not marked")))
+
+(defun larumbe/clearcase-checkout-revert-buffer (&optional ignore-auto noconfirm preserve-modes)
+  (interactive)
+  (let ((pos (point)))
+    (when (and clearcase-checkout-marked-files
+               (not (y-or-n-p "Warning: Marked files in buffer! Reverting will reset them before checkout. Continue? ")))
+      (user-error "Aborting revert..."))
+    (save-window-excursion
+      (larumbe/clearcase-find-checkouts-in-current-view))
+    (if (> pos (point-max))
+        (goto-char (point-min))
+      (goto-char pos))))
+
+(defun larumbe/clearcase-checkout-checkin-marked ()
+  (interactive)
+  (larumbe/clearcase-checkin-file-list clearcase-checkout-marked-files)
+  (remove-overlays (point-min) (point-max))
+  (setq clearcase-checkout-marked-files nil))
+
+
+(define-key clearcase-checkout-mode-map (kbd "C-o") #'(lambda () (interactive) (find-file-other-window (thing-at-point 'filename))))
+(define-key clearcase-checkout-mode-map (kbd "o")   #'(lambda () (interactive) (find-file-other-window (thing-at-point 'filename))))
+(define-key clearcase-checkout-mode-map (kbd "C-j") #'(lambda () (interactive) (find-file-other-window (thing-at-point 'filename))))
+(define-key clearcase-checkout-mode-map (kbd "RET") #'(lambda () (interactive) (find-file-other-window (thing-at-point 'filename))))
 (define-key clearcase-checkout-mode-map (kbd "k")   #'(lambda () (interactive) (quit-window 'kill)))
 (define-key clearcase-checkout-mode-map (kbd "p") #'larumbe/clearcase-checkout-prev-line)
 (define-key clearcase-checkout-mode-map (kbd "n") #'larumbe/clearcase-checkout-next-line)
+(define-key clearcase-checkout-mode-map (kbd "m") #'larumbe/clearcase-checkout-mark-file)
+(define-key clearcase-checkout-mode-map (kbd "u") #'larumbe/clearcase-checkout-unmark-file)
+(define-key clearcase-checkout-mode-map (kbd "P") #'larumbe/clearcase-checkout-checkin-marked)
 
 
 
