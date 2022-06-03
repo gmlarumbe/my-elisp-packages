@@ -489,19 +489,22 @@ Based on `completing-read' for current checked-out files."
 
 
 ;;;###autoload
-(defun larumbe/clearcase-kill-ediff-sessions ()
-  "Kill all Ediff sessions spawned by Clearcase."
+(defun larumbe/clearcase-clean-buffers ()
+  "Kill all Ediff sessions spawned by Clearcase.
+Also kill @@/main/ versions."
   (interactive)
   (let ((ediff-bufs-re1 "*Ediff ")
         (ediff-bufs-re2 "*ediff-")
+        (version-re     "@@/main/[0-9]+")
         (buf-num 0))
     (mapc (lambda (buf)
             (when (or (string-prefix-p ediff-bufs-re1 (buffer-name buf))
-                      (string-prefix-p ediff-bufs-re2 (buffer-name buf)))
+                      (string-prefix-p ediff-bufs-re2 (buffer-name buf))
+                      (string-match version-re (buffer-name buf)))
               (kill-buffer buf)
               (setq buf-num (1+ buf-num))))
           (buffer-list))
-    (message "Killed %0d Ediff buffers" buf-num)))
+    (message "Killed %0d Ediff/Version buffers" buf-num)))
 
 
 (defhydra hydra-clearcase (:color blue
@@ -524,7 +527,7 @@ Based on `completing-read' for current checked-out files."
   ("d"  larumbe/clearcase-diff-pred "Diff predecesor")
   ("D"  larumbe/clearcase-diff-named-version "Diff named version")
   ("bd" larumbe/clearcase-diff-branch-base "Diff branch base")
-  ("k"  larumbe/clearcase-kill-ediff-sessions "Kill Ediff buffers")
+  ("k"  larumbe/clearcase-clean-buffers "Kill Ediff/Version buffers")
 
   ("l"  larumbe/clearcase-list-history "Element history" :column "History")
   ("a"  larumbe/clearcase-annotate "Annotate")
