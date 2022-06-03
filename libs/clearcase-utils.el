@@ -386,10 +386,51 @@ Useful to be performed before running a merge with LATEST to predict merge confl
 
 
 
+(defun larumbe/clearcase-issues-to-checkin (file)
+  "Similar to `clearcase-assert-file-ok-to-checkin' but making more checks:
+- Throw an error if file is not checkedout and user is not the owner
+- Throw an error if file is checkedout in reserved mode by someone else
+- Return warning message in case the file needs to be merged with LATEST
+- Return nil if everything's fine
+"
+  (let (co-reserved
+        existing-versions-string
+        existing-versions-int
+        latest-version
+        pred-version
+        merge-needed)
+    (unless (executable-find "cleartool")
+      (error "Cleartool not found in $PATH!"))
+    ;; clearcase.el API: checks if file is checked-out and I am the owner, otherwise throws an error
+    (clearcase-assert-file-ok-to-checkin file)
+    ;; Check if other people have checked out the same file and if it was a reserved checkout
+    (setq co-reserved (shell-command-to-string (concat "cleartool lsco " file " | grep -v " (user-login-name))))
+    (when (not (string= "" co-reserved))
+      (with-temp-buffer
+        (insert co-reserved)
+        (save-excursion
+          (goto-char (point-min))
+          (when (re-search-forward "\(reserved\)" nil t)
+            (error "Someone else has a RESERVED checkout on %s" file)))))
+    ;; Check if a merge is needed before checking in (compare LATEST with the one in the buffer)
+    (setq existing-versions-string (directory-files (concat file "@@/main/") nil "^[0-9]+$"))
+    (setq existing-versions-int (mapcar #'string-to-number existing-versions-string))
+    (setq latest-version (reduce #'max existing-versions-int))
+    (setq pred-version (string-to-number (string-remove-prefix "/main/" (clearcase-fprop-predecessor-version file))))
+    (when (> latest-version pred-version)
+      (setq merge-needed t))
+    ;; Return value
+    (if merge-needed
+        (format "File %s requires merge" file)
+      nil)))
+
+
 (defun larumbe/clearcase-checkin-file-list (files)
   "Check-in list of strings FILES at once."
-  (interactive)
-  (let (cmd-args)
+  (let (cmd-args merge-warnings)
+    (when (setq merge-warnings (mapconcat #'larumbe/clearcase-issues-to-checkin files "\n"))
+      (unless (yes-or-no-p (concat "Following files need merge: \n\n" merge-warnings "\n\nContinue?\n"))
+        (user-error "Aborting!")))
     (if (yes-or-no-p (concat "Checking in following files:\n\n" (mapconcat #'identity files "\n") "\n\nContinue?\n"))
         (progn
           (mapcar (lambda (elm) (push elm cmd-args)) files)
