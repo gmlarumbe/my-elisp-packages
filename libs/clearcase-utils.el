@@ -437,6 +437,20 @@ Based on `completing-read' for current checked-out files."
   (clearcase-checkout-mode))
 
 
+;;;###autoload
+(defun larumbe/clearcase-kill-ediff-sessions ()
+  "Kill all Ediff sessions spawned by Clearcase."
+  (interactive)
+  (let ((ediff-bufs-re1 "*Ediff ")
+        (ediff-bufs-re2 "*ediff-")
+        (buf-num 0))
+    (mapc (lambda (buf)
+            (when (or (string-prefix-p ediff-bufs-re1 (buffer-name buf))
+                      (string-prefix-p ediff-bufs-re2 (buffer-name buf)))
+              (kill-buffer buf)
+              (setq buf-num (1+ buf-num))))
+          (buffer-list))
+    (message "Killed %0d Ediff buffers" buf-num)))
 
 
 (defhydra hydra-clearcase (:color blue
@@ -459,6 +473,7 @@ Based on `completing-read' for current checked-out files."
   ("d"  larumbe/clearcase-diff-pred "Diff predecesor")
   ("D"  larumbe/clearcase-diff-named-version "Diff named version")
   ("bd" larumbe/clearcase-diff-branch-base "Diff branch base")
+  ("k"  larumbe/clearcase-kill-ediff-sessions "Kill Ediff buffers")
 
   ("l"  larumbe/clearcase-list-history "Element history" :column "History")
   ("a"  larumbe/clearcase-annotate "Annotate")
