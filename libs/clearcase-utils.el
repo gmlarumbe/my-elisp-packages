@@ -449,7 +449,10 @@ Useful to be performed before running a merge with LATEST to predict merge confl
 (defun larumbe/clearcase-checkin-file-list (files)
   "Check-in list of strings FILES at once."
   (let (cmd-args merge-warnings)
-    (unless (string= "" (setq merge-warnings (mapconcat #'larumbe/clearcase-issues-to-checkin files "\n")))
+    (message "Performing some checks before check-in...")
+    (setq merge-warnings (mapconcat #'larumbe/clearcase-issues-to-checkin files "\n"))
+    (unless (or (string-match "^[\n]+$" merge-warnings) ; previous mapconcat will return a newline for each analyzed file if there was no warning and more than 1 file
+                (string= "" merge-warnings))           ; previuos mapconcat will return empty string if there was only 1 file to check-in
       (unless (yes-or-no-p (concat "Warnings: \n\n" merge-warnings "\nContinue?\n"))
         (user-error "Aborting!")))
     (if (yes-or-no-p (concat "Checking in following files:\n\n" (mapconcat #'identity files "\n") "\n\nContinue?\n"))
