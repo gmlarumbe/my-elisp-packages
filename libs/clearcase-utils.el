@@ -56,11 +56,14 @@ If in dired-mode but not pointing on a file, check-in current directory."
 
 ;;;###autoload
 (defun larumbe/clearcase-ediff-pred ()
-  "Clearcase ediff-pred based on `current-buffer'/dired' context."
+  "Clearcase ediff-pred based on `current-buffer'/dired/clearcase-checkout' context."
   (interactive)
-  (if (string= major-mode "dired-mode")
-      (call-interactively #'clearcase-ediff-pred-dired-file)
-    (call-interactively #'clearcase-ediff-pred-current-buffer)))
+  (cond ((string= major-mode "dired-mode")
+         (call-interactively #'clearcase-ediff-pred-dired-file))
+        ((string= major-mode "clearcase-checkout-mode")
+         (clearcase-ediff-file-with-version (thing-at-point 'filename) (clearcase-fprop-predecessor-version (thing-at-point 'filename))))
+        (t
+         (call-interactively #'clearcase-ediff-pred-current-buffer))))
 
 
 ;;;###autoload
@@ -477,7 +480,7 @@ Based on `completing-read' for current checked-out files."
     (save-window-excursion
       (clearcase-find-checkouts-in-current-view)
       (with-temp-buffer
-        (insert-buffer-substring "*clearcase*")
+        (insert-buffer-substring "*clearcase-co*")
         (setq checked-out-files (split-string (buffer-substring-no-properties (point-min) (point-max)) "\n"))
         (push "Done" checked-out-files)))
     ;; Choose files to be checked-in
@@ -843,7 +846,7 @@ checkedout file."
 (define-key clearcase-checkout-mode-map (kbd "u") #'larumbe/clearcase-unmark-file)
 (define-key clearcase-checkout-mode-map (kbd "P") #'larumbe/clearcase-checkout-checkin-marked)
 (define-key clearcase-checkout-mode-map (kbd "l") #'recenter-top-bottom)
-
+(define-key clearcase-checkout-mode-map (kbd "e") #'larumbe/clearcase-ediff-pred)
 
 (defun larumbe/clearcase-checkout-revert-buffer (&optional ignore-auto noconfirm preserve-modes)
   (interactive)
