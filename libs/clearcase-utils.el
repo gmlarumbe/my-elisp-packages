@@ -24,6 +24,14 @@
 
 
 ;;;###autoload
+(defun larumbe/clearcase-checkout-reserved ()
+  "Clearcase reserved checkout based on `current-buffer'/dired' context."
+  (interactive)
+  (let ((clearcase-checkout-arguments '("-reserved")))
+    (call-interactively #'larumbe/clearcase-checkout)))
+
+
+;;;###autoload
 (defun larumbe/clearcase-uncheckout ()
   "Clearcase uncheckout based on `current-buffer'/dired' context."
   (interactive)
@@ -510,6 +518,7 @@ Also kill @@/main/ versions."
 (defhydra hydra-clearcase (:color blue
                            :hint  nil)
   ("f"  larumbe/clearcase-checkout "Check-out file(s)" :column "Check")     ; "Fetch"
+  ("r"  larumbe/clearcase-checkout-reserved "Check-out reserved")
   ("u"  larumbe/clearcase-uncheckout "Uncheck-out file(s)")                 ; "Unstage"
   ("p"  larumbe/clearcase-checkin "Check-in file(s)/dir")                   ; "Push"
   ("P"  larumbe/clearcase-checkin-multiple "Check-in many files at once")   ; "Push multiple"
