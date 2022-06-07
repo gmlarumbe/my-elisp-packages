@@ -99,7 +99,7 @@ push to the related marker-stack instead of the xref default."
   (when fn-push-marker-stack
     (unless (fboundp fn-push-marker-stack)
       (error "%s not a recognized function" fn-push-marker-stack)))
-  (let ((file (thing-at-point 'filename)))
+  (let ((file (substitute-in-file-name (thing-at-point 'filename))))
     (if (file-exists-p file)
         (progn
           (if fn-push-marker-stack
