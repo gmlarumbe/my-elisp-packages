@@ -424,8 +424,8 @@ Useful to be performed before running a merge with LATEST to predict merge confl
         (insert co-reserved)
         (goto-char (point-min))
         (save-excursion
-          (when (re-search-forward "\(reserved\)" nil t)
-            (error "Someone else has a RESERVED checkout on %s" file)))
+          (when (re-search-forward "\\(?1:[a-z]+\\)\s+checkout version.*\(reserved\)" nil t)
+            (error "%s has a RESERVED checkout on %s" (match-string-no-properties 1) file)))
         (save-excursion
           (when (re-search-forward "\\(?1:[a-z]+\\)\s+checkout version.*\(unreserved\)" nil t)
             (setq co-others t)
@@ -450,9 +450,8 @@ Useful to be performed before running a merge with LATEST to predict merge confl
   "Check-in list of strings FILES at once."
   (let (cmd-args merge-warnings)
     (message "Performing some checks before check-in...")
-    (setq merge-warnings (mapconcat #'larumbe/clearcase-issues-to-checkin files "\n"))
-    (unless (or (string-match "^[\n]+$" merge-warnings) ; previous mapconcat will return a newline for each analyzed file if there was no warning and more than 1 file
-                (string= "" merge-warnings))           ; previuos mapconcat will return empty string if there was only 1 file to check-in
+    (setq merge-warnings (mapconcat #'larumbe/clearcase-issues-to-checkin files ""))
+    (unless (string= "" merge-warnings)
       (unless (yes-or-no-p (concat "Warnings: \n\n" merge-warnings "\nContinue?\n"))
         (user-error "Aborting!")))
     (if (yes-or-no-p (concat "Checking in following files:\n\n" (mapconcat #'identity files "\n") "\n\nContinue?\n"))
