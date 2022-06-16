@@ -498,7 +498,10 @@ Based on `completing-read' for current checked-out files."
   "Wrapper around `clearcase-find-checkouts-in-current-view' that enables `clearcase-checkout-mode'."
   (interactive)
   (clearcase-find-checkouts-in-current-view)
-  (clearcase-checkout-mode))
+  (clearcase-checkout-mode)
+  ;; Align with first result
+  (larumbe/clearcase-next-line)
+  (larumbe/clearcase-prev-line))
 
 
 ;;;###autoload
@@ -772,7 +775,7 @@ checkedout file."
   (if arg
       (forward-line -1)
     (forward-line))
-  (looking-at larumbe/clearcase-checkout-filepath-regexp)
+  (looking-at larumbe/clearcase-checkout-filepath-no-ext-regexp)
   (goto-char (match-beginning 2)))
 
 (defun larumbe/clearcase-prev-line ()
@@ -821,8 +824,9 @@ checkedout file."
 
 
 ;;;;; checkout
-(defvar larumbe/clearcase-checkout-filepath-verilog-regexp "\\(?1:[/_\.a-zA-Z0-9]+/\\)\\(?2:[_a-zA-Z0-9]+\\)\\(?3:\.\\)\\(?4:s?vh?+\\)$")
-(defvar larumbe/clearcase-checkout-filepath-regexp         "\\(?1:[/_\.a-zA-Z0-9]+/\\)\\(?2:[_a-zA-Z0-9]+\\)\\(?3:\.\\)\\(?4:[a-z]+\\)")
+(defvar larumbe/clearcase-checkout-filepath-verilog-regexp "\\(?1:[/_\.a-zA-Z0-9]+/\\)\\(?2:[_a-zA-Z0-9]+\\)\\(?3:\\.\\)\\(?4:s?vh?+\\)$")
+(defvar larumbe/clearcase-checkout-filepath-regexp         "\\(?1:[/_\.a-zA-Z0-9]+/\\)\\(?2:[_a-zA-Z0-9]+\\)\\(?3:\\.\\)\\(?4:[a-z]+\\)")
+(defvar larumbe/clearcase-checkout-filepath-no-ext-regexp  "\\(?1:[/_\.a-zA-Z0-9]+/\\)\\(?2:[_a-zA-Z0-9]+\\)")
 
 ;; INFO: Verilog regexp must have precedence over generic regexp since it's a subgroup
 (defvar larumbe/clearcase-checkout-font-lock-defaults ; Reuse clearcase-log faces
@@ -833,7 +837,10 @@ checkedout file."
      (,larumbe/clearcase-checkout-filepath-regexp . ((1 'larumbe/font-lock-cc-log-date-time-face)
                                                      (2 'larumbe/font-lock-cc-log-author-face)
                                                      (3 'larumbe/font-lock-cc-log-separator-face)
-                                                     (4 'larumbe/font-lock-cc-log-action-face))))))
+                                                     (4 'larumbe/font-lock-cc-log-action-face)))
+     (,larumbe/clearcase-checkout-filepath-no-ext-regexp . ((1 'larumbe/font-lock-cc-log-date-time-face)
+                                                            (2 'larumbe/font-lock-cc-log-author-face)))
+     )))
 
 
 (defvar clearcase-checkout-mode-map (make-sparse-keymap))
