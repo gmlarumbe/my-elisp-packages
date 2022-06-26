@@ -97,6 +97,21 @@ there's a region, all lines that region covers will be duplicated."
   (aset buffer-display-table ?\^M []))
 
 
+;; https://emacsredux.com/blog/2013/04/21/edit-files-as-root/
+;;;###autoload
+(defun er-sudo-edit (&optional arg)
+  "Edit currently visited file as root.
+
+With a prefix ARG prompt for a file to visit.
+Will also prompt for a file to visit if current
+buffer is not visiting a file."
+  (interactive "P")
+  (if (or arg (not buffer-file-name))
+      (find-file (concat "/sudo:root@localhost:"
+                         (read-file-name "Find file(as root): ")))
+    (find-alternate-file (concat "/sudo:root@localhost:" buffer-file-name))))
+
+
 ;;;; Lists/regexp/strings/files/directories
 ;; http://ergoemacs.org/emacs/elisp_read_file_content.html
 ;;;###autoload
