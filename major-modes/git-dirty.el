@@ -43,6 +43,12 @@
   (quit-window t))
 
 
+(defun git-dirty-revert-buffer ()
+  "Revert buffer"
+  (interactive)
+  (larumbe/emacs-check-dirty-repos))
+
+
 (defun git-dirty-magit ()
   "Run `magit' on repo where the point is at."
   (interactive)
@@ -66,6 +72,7 @@
   (define-key git-dirty-mode-map (kbd "k")       #'git-dirty-clean-buffer)
   (define-key git-dirty-mode-map (kbd "p")       #'git-dirty-previous-project)
   (define-key git-dirty-mode-map (kbd "n")       #'git-dirty-next-project)
+  (define-key git-dirty-mode-map (kbd "g")       #'git-dirty-revert-buffer)
   (define-key git-dirty-mode-map (kbd "C-c C-p") #'git-dirty-previous-project)
   (define-key git-dirty-mode-map (kbd "C-c C-n") #'git-dirty-next-project))
 
