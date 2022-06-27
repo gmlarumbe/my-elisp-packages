@@ -141,41 +141,44 @@ buffer is not visiting a file."
 
 ;;;; More complex/less frequently used
 ;;;###autoload
-(defun forward-same-indent ()
-  "Move forward to next line with same indent (copied from `vhdl-mode').
-DANGER: Comment needs to be substituted from '--' to  mode-specific comment."
-  (interactive)
-  (let ((pos (point))
-        (indent (current-indentation)))
-    (beginning-of-line 2)
+(defun move-same-indent (&optional backward)
+  "Move forward to next line with same indent.
+
+Copied from `vhdl-mode' and generalized.
+
+Return new point position if found same indent, otherwise return nil.
+
+If BACKWARD is non-nil, search for same indent backward."
+  (let ((start (point))
+        (indent (current-indentation))
+        (arg (if backward
+                 -0
+               2)))
+    (beginning-of-line arg)
     (while (and (not (eobp))
-                (or (looking-at "^\\s-*\\(--.*\\)?$")
+                (or (looking-at (concat "^\\s-*" "\\(" comment-start ".*" "\\)?$"))
                     (> (current-indentation) indent)))
-      (beginning-of-line 2))
+      (beginning-of-line arg))
     (if (= (current-indentation) indent)
-        (back-to-indentation)
-      (message "No following line with same indent found in this block")
-      (goto-char pos)
+        (progn
+          (back-to-indentation)
+          (point))
+      (goto-char start)
       nil)))
 
+;;;###autoload
+(defun forward-same-indent ()
+  "Move forward to next line with same indent.
+Return new point position if found same indent, otherwise return nil."
+  (interactive)
+  (move-same-indent))
 
 ;;;###autoload
 (defun backward-same-indent ()
-  "Move backward to previous line with same indent (copied from `vhdl-mode').
-DANGER: Comment needs to be substituted from '--' to  mode-specific comment."
+  "Move backward to previous line with same indent.
+Return new point position if found same indent, otherwise return nil."
   (interactive)
-  (let ((pos (point))
-        (indent (current-indentation)))
-    (beginning-of-line -0)
-    (while (and (not (bobp))
-                (or (looking-at "^\\s-*\\(--.*\\)?$")
-                    (> (current-indentation) indent)))
-      (beginning-of-line -0))
-    (if (= (current-indentation) indent)
-        (back-to-indentation)
-      (message "No preceding line with same indent found in this block")
-      (goto-char pos)
-      nil)))
+  (move-same-indent :backward))
 
 
 ;; https://emacs.stackexchange.com/questions/5441/function-to-delete-all-comments-from-a-buffer-without-moving-them-to-kill-ring
