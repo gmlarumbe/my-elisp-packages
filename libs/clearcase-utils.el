@@ -937,6 +937,7 @@ checkedout file."
 
 ;;;###autoload
 (define-derived-mode clearcase-lsprivate-mode special-mode
+  (defvar-local larumbe/clearcase-marked-files nil)
   (setq font-lock-defaults larumbe/clearcase-lsprivate-font-lock-defaults)
   (setq-local revert-buffer-function #'larumbe/clearcase-lsprivate-revert-buffer)
   (setq mode-name "CC-PrivateFiles"))
