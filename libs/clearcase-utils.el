@@ -405,7 +405,7 @@ Useful to be performed before running a merge with LATEST to predict merge confl
 - Return warning message in case the file needs to be merged with LATEST or checkedout by someone else
 - Return nil if everything's fine
 "
-  (let (co-reserved
+  (let (co-msg-others
         existing-versions-string
         existing-versions-int
         latest-version
@@ -418,10 +418,12 @@ Useful to be performed before running a merge with LATEST to predict merge confl
     ;; clearcase.el API: checks if file is checked-out and I am the owner, otherwise throws an error
     (clearcase-assert-file-ok-to-checkin file)
     ;; Check if other people have checked out the same file and if it was a reserved/unreserved checkout
-    (setq co-reserved (shell-command-to-string (concat "cleartool lsco " file " | grep -v " (user-login-name))))
-    (when (not (string= "" co-reserved))
+    (if (file-directory-p file)
+        (setq co-msg-others (shell-command-to-string (concat "cleartool lsco -directory " file " | grep -v " (user-login-name))))
+      (setq co-msg-others (shell-command-to-string (concat "cleartool lsco " file " | grep -v " (user-login-name)))))
+    (when (not (string= "" co-msg-others))
       (with-temp-buffer
-        (insert co-reserved)
+        (insert co-msg-others)
         (goto-char (point-min))
         (save-excursion
           (when (re-search-forward "\\(?1:[a-z]+\\)\s+checkout version.*\(reserved\)" nil t)
