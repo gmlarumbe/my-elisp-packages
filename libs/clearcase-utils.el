@@ -777,8 +777,8 @@ checkedout file."
   (if arg
       (forward-line -1)
     (forward-line))
-  (looking-at larumbe/clearcase-checkout-filepath-no-ext-regexp)
-  (goto-char (match-beginning 2)))
+  (when (looking-at larumbe/clearcase-checkout-filepath-no-ext-regexp)
+    (goto-char (match-beginning 2))))
 
 (defun larumbe/clearcase-prev-line ()
   (interactive)
