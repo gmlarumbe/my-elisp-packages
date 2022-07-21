@@ -218,6 +218,15 @@ If prefix-arg or ALL argument is passed, check all my emacs conf repos."
     (message "`vc-follow-symlinks' set to: %s" vc-follow-symlinks)))
 
 
+;;;###autoload
+(defun larumbe/git-discard-whitespace-changes ()
+  "Discard only whitespace changes.
+Useful when `untabify-trailing-ws' is non-nil in a buffer
+full of whitespaces to avoid large meaningless diffs."
+  (interactive)
+  (magit--shell-command "git diff -U0 -w --no-color | git apply --cached --ignore-whitespace --unidiff-zero -"))
+
+
 
 (provide 'larumbe-vc-utils)
 
