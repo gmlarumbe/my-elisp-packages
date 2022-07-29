@@ -333,21 +333,16 @@ Make use of `auto-mode-alist' registered extensions."
 (defun larumbe/newline-advice (&optional ARG INTERACTIVE)
   "Advice to set :before-until for newline functions of major-modes that
 kill *ag* or *xref* buffers."
-  (let* ((ag-buf "*ag search*")
-         (xref-buf "*xref*")
-         (rgrep-buf "*ripgrep-search*")
-         (ag-win (get-buffer-window ag-buf))
-         (xref-win (get-buffer-window xref-buf))
-         (rgrep-win (get-buffer-window rgrep-buf))
-         win)
-    ;; Look for buffers sequentialy
-    (setq win (or ag-win
-                  xref-win
-                  rgrep-win))
-    ;; Kill corresponding window and buffer
-    (when win
-      (quit-window t win)
-      win)))
+  (let* ((buf-list '("*ag search*" "*xref*" "*ripgrep-search*" "*Help*"))
+         buf-win)
+    ;; Look for buffers sequentialy and break loop when one is found
+    (catch 'found
+      (dolist (buf buf-list)
+        (setq buf-win (get-buffer-window buf))
+        ;; Kill corresponding window and buffer
+        (when buf-win
+          (quit-window t buf-win)
+          (throw 'found buf-win))))))
 
 
 ;;;; More complex/less frequently used
