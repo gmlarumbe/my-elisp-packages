@@ -320,6 +320,22 @@ Make use of `auto-mode-alist' registered extensions."
 
 
 ;;;###autoload
+(defun larumbe/flycheck-eldoc-mode (&optional arg)
+  "Flycheck-mode wrapper function.
+Disable function `eldoc-mode' if flycheck is enabled
+to avoid minibuffer collisions.
+Argument ARG sets `flycheck-mode' non-interactively."
+  (interactive)
+  ;; Non-interactive
+  (if arg
+      (progn
+        (flycheck-mode arg)
+        (eldoc-mode (* -1 arg)))
+    ;; Interactive
+    (larumbe/flycheck-eldoc-toggle)))
+
+
+;;;###autoload
 (defun larumbe/scratch-toggle ()
   "Toggle showing scratch buffer at current buffer."
   (interactive)
