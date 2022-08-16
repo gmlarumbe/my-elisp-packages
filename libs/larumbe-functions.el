@@ -89,24 +89,42 @@ If optional NO-LINE is given, then do not copy line to `kill-ring'"
 
 
 ;;;; Navigation
+;; Inspiration from: https://stackoverflow.com/questions/3139970/open-a-file-at-line-with-filenameline-syntax
 ;;;###autoload
-(defun larumbe/find-file-at-point (&optional fn-push-marker-stack)
-  "Wrapper for `ffap' without asking for the file.
-
-If optional function FN-PUSH-MARKER-STACK arg is provided,
-push to the related marker-stack instead of the xref default."
+(defun larumbe/find-file-dwim ()
+  "Wrapper for `find-file-at-point'.
+Avoids asking for the file input if point is over a file that exists.
+If it does not exist prompt for regular completion framework input.
+Push to the xref marker stack to be able to navigate back to original file.
+Supports shell envs in the filename and jump to line if file is of the form: file:[0-9]+"
   (interactive)
-  (when fn-push-marker-stack
-    (unless (fboundp fn-push-marker-stack)
-      (error "%s not a recognized function" fn-push-marker-stack)))
-  (let ((file (substitute-in-file-name (thing-at-point 'filename))))
-    (if (file-exists-p file)
-        (progn
-          (if fn-push-marker-stack
-              (funcall fn-push-marker-stack)
-            (xref-push-marker-stack))
-          (ffap file))
-      (message "File \"%s\" does not exist (check point or current path)" file))))
+  (let* ((raw-filename (thing-at-point 'filename :noprops))
+         expanded-filename filename bounds line-num)
+    (cond (;; Use current completion framework to find a file (tested with ivy/counsel)
+           (not raw-filename)
+           (find-file-at-point))
+          (;; Try to guess what's the filename if point is over a non-existing file
+           (progn
+             (setq expanded-filename (substitute-in-file-name raw-filename))
+             (setq filename (larumbe/strip-file-line-number expanded-filename))
+             (setq bounds (bounds-of-thing-at-point 'filename))
+             (not (file-exists-p filename)))
+           (find-file-at-point))
+          (;; Find existing file and jump to corresponding line number if applicable
+           bounds
+           (save-excursion
+             (goto-char (car bounds))
+             (search-forward-regexp "[^ ]:" (cdr bounds) t)
+             (if (looking-at "[0-9]+")
+                 (setq line-num (string-to-number (buffer-substring (match-beginning 0) (match-end 0))))))
+           (xref-push-marker-stack)
+           (find-file-at-point filename)
+           (unless (equal line-num nil)
+             (goto-line line-num)))
+          (t
+           (find-file-at-point)
+           (message "Unexpected case in `larumbe/find-file-dwim'!")))))
+
 
 
 ;;;###autoload
@@ -274,6 +292,13 @@ Make use of `auto-mode-alist' registered extensions."
       (setq ext (car alist-elm))
       (push ext ext-list))
     ext-list))
+
+
+;;;###autoload
+(defun larumbe/strip-file-line-number (file)
+  "Strip line number from FILE.
+Assummes line number is of the form: filepath:[0-9]+"
+  (replace-regexp-in-string "\\(?1:.*\\):[0-9]+" "\\1" file))
 
 
 ;;;; Misc
