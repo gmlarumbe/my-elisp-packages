@@ -101,7 +101,8 @@ Supports shell envs in the filename and jump to line if file is of the form: fil
   (let* ((raw-filename (thing-at-point 'filename :noprops))
          expanded-filename filename bounds line-num)
     (cond (;; Use current completion framework to find a file (tested with ivy/counsel)
-           (not raw-filename)
+           (or (not (string= major-mode "dired"))
+               (not raw-filename))
            (find-file-at-point))
           (;; Try to guess what's the filename if point is over a non-existing file
            (progn
