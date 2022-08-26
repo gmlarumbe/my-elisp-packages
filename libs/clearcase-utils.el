@@ -499,11 +499,11 @@ Based on `completing-read' for current checked-out files."
 (defun larumbe/clearcase-find-checkouts-in-current-view ()
   "Wrapper around `clearcase-find-checkouts-in-current-view' that enables `clearcase-checkout-mode'."
   (interactive)
-  (clearcase-find-checkouts-in-current-view)
-  (clearcase-checkout-mode)
-  ;; Align with first result
-  (larumbe/clearcase-next-line)
-  (larumbe/clearcase-prev-line))
+  (unless (string= (clearcase-find-checkouts-in-current-view) "No checkouts found")
+    (clearcase-checkout-mode)
+    ;; Align with first result
+    (larumbe/clearcase-next-line)
+    (larumbe/clearcase-prev-line)))
 
 
 ;;;###autoload
