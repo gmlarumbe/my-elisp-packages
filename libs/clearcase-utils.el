@@ -525,6 +525,26 @@ Also kill @@/main/ versions."
     (message "Killed %0d Ediff/Version buffers" buf-num)))
 
 
+;;;###autoload
+(defun larumbe/clearcase-remove-file ()
+  "Remove current file.
+Requires:
+ 1) Check-out of the directory holding the file
+ 2) No checkouts on that file"
+  (interactive)
+  (let ((file (if (string= major-mode "dired-mode")
+                  (dired-get-filename)
+                buffer-file-name)))
+    (clearcase-utl-populate-and-view-buffer
+     "*clearcase*"
+     nil
+     (lambda ()
+       (clearcase-ct-do-cleartool-command "rmname"
+                                          nil
+                                          'unused
+                                          `(,file))))))
+
+
 (defhydra hydra-clearcase (:color blue
                            :hint  nil)
   ("f"  larumbe/clearcase-checkout "Check-out file(s)" :column "Check")     ; "Fetch"
@@ -570,7 +590,8 @@ Also kill @@/main/ versions."
   ("Gp"  clearcase-gui-project-explorer "Project Explorer")
   ("Gu"  clearcase-gui-snapshot-view-updater "View Updater")
 
-  ("On"  larumbe/clearcase-next-action "Next Action" :column "Others")
+  ("Or"  larumbe/clearcase-remove-file "Remove file" :column "Others")
+  ("On"  larumbe/clearcase-next-action "Next Action")
   ("Om"  larumbe/clearcase-mkelem "Make Element")
   ("Ot"  clearcase-mkbrtype "Make Branch Type")
 
@@ -739,7 +760,6 @@ checkedout file."
         (error "Aborting")))
     ;; Actual command
     (ediff-files filename other-filename)))
-
 
 
 ;;;###autoload
