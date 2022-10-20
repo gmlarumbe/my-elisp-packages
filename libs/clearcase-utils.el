@@ -544,6 +544,45 @@ Requires:
                                           'unused
                                           `(,file))))))
 
+;;;###autoload
+(defun larumbe/clearcase-add-dir-and-files-recursively ()
+  "Add dired directory at point and subdirectories/files recursively to CC.
+
+INFO: Alternative command that also check-ins (untested):
+ - ct mkelem -ci -nc */*
+"
+  (interactive)
+  (let ((dirs (larumbe/find-subdirectories-recursive (dired-get-filename)))
+        files-and-dirs files)
+    ;; Some checks
+    (unless (string= major-mode "dired-mode")
+      (error "Only works in dired-mode"))
+    (dolist (dir dirs)
+      ;; First add the directory
+      (clearcase-utl-populate-and-view-buffer
+       "*clearcase*"
+       nil
+       (lambda ()
+         (clearcase-ct-do-cleartool-command "mkelem"
+                                            nil
+                                            'unused
+                                            `("-nc" "-mkpath" ,dir))))
+      ;; And afterwards directory files
+      (let ((files-and-dirs (delete ".." (delete "." (directory-files dir t))))
+            filelist)
+        (dolist (file files-and-dirs)
+          (unless (file-directory-p file)
+            (push file filelist)))
+        (when filelist
+          (clearcase-utl-populate-and-view-buffer
+           "*clearcase*"
+           nil
+           (lambda ()
+             (clearcase-ct-do-cleartool-command "mkelem"
+                                                nil
+                                                'unused
+                                                (append '("-nc" "-mkpath") filelist)))))))))
+
 
 (defhydra hydra-clearcase (:color blue
                            :hint  nil)
@@ -590,9 +629,10 @@ Requires:
   ("Gp"  clearcase-gui-project-explorer "Project Explorer")
   ("Gu"  clearcase-gui-snapshot-view-updater "View Updater")
 
-  ("Or"  larumbe/clearcase-remove-file "Remove file" :column "Others")
+  ("Om"  larumbe/clearcase-mkelem "Make Element" :column "Others")
+  ("Or"  larumbe/clearcase-remove-file "Remove file")
+  ("Od"  larumbe/clearcase-add-dir-and-files-recursively "Add dir/files")
   ("On"  larumbe/clearcase-next-action "Next Action")
-  ("Om"  larumbe/clearcase-mkelem "Make Element")
   ("Ot"  clearcase-mkbrtype "Make Branch Type")
 
   ("Zd" clearcase-dump "Dump files/views props" :column "Debug")
