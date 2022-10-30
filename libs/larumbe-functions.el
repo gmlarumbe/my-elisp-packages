@@ -75,14 +75,14 @@ Seems useful to export long compilation logs."
 
 
 ;;;###autoload
-(defun larumbe/pwd-to-kill-ring (&optional no-line)
+(defun larumbe/pwd-to-kill-ring (&optional line-num)
   "Copy current file path to `kill-ring'.
-If optional NO-LINE is given, then do not copy line to `kill-ring'"
+If optional LINE-NUM is given, copy line to `kill-ring'."
   (interactive "P")
   (let (file-name)
-    (if no-line
-        (setq file-name (buffer-file-name))
-      (setq file-name (concat (buffer-file-name) ":" (format "%s" (line-number-at-pos)))))
+    (if line-num
+        (setq file-name (concat (buffer-file-name) ":" (format "%s" (line-number-at-pos))))
+      (setq file-name (buffer-file-name)))
     (kill-new file-name)
     (message (buffer-file-name))))
 
