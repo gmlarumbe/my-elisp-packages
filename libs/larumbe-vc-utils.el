@@ -179,7 +179,6 @@ REPOS is assumed to be a list of strings containing the path of each repo.
 
 Return list of strings with forked repos.
 A repo is considered forked if remote is not tracking origin."
-  (interactive)
   (unless (executable-find "git")
     (error "Git is not installed!"))
   (let (forked-repos cmd cmd-out remote-branch)
@@ -190,7 +189,7 @@ A repo is considered forked if remote is not tracking origin."
       (setq cmd (concat "git -C " repo " status -sb"))
       ;; (setq cmd (concat "git -C " repo " for-each-ref --format='%(upstream:short)' \"$(git symbolic-ref -q HEAD)\""))
       (setq cmd-out (shell-command-to-string cmd))
-      (setq remote-branch (car (cdr (split-string cmd-out "\\.\\.\\."))))
+      (setq remote-branch (cadr (split-string cmd-out "\\.\\.\\.")))
       (when (string-prefix-p "fork/" remote-branch)
         (message "Forked repo: %s" repo)
         (push repo forked-repos)))
