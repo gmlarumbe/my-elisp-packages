@@ -41,6 +41,34 @@
 
 
 ;;;###autoload
+(defun larumbe/clearcase-make-checkout-reserved ()
+  "Make checkout of current buffer reserved."
+  (interactive)
+  (let ((file-name buffer-file-name)) ; clearcase-utl-populate-and-view-buffer will open a buffer without file associated
+    (clearcase-utl-populate-and-view-buffer
+     "*clearcase*"
+     nil
+     (lambda ()
+       (clearcase-ct-do-cleartool-command "reserve"
+                                          nil
+                                          'unused
+                                          `(,file-name))))))
+
+;;;###autoload
+(defun larumbe/clearcase-make-checkout-unreserved ()
+  "Make checkout of current buffer unreserved."
+  (interactive)
+  (let ((file-name buffer-file-name)) ; clearcase-utl-populate-and-view-buffer will open a buffer without file associated
+    (clearcase-utl-populate-and-view-buffer
+     "*clearcase*"
+     nil
+     (lambda ()
+       (clearcase-ct-do-cleartool-command "unreserve"
+                                          nil
+                                          'unused
+                                          `(,file-name))))))
+
+;;;###autoload
 (defun larumbe/clearcase-checkin ()
   "Clearcase checkin based on `current-buffer'/dired' context.
 If in dired-mode but not pointing on a file, check-in current directory."
@@ -595,6 +623,8 @@ INFO: Alternative command that also check-ins (untested):
   ("S"  larumbe/clearcase-find-checkouts-current-dir-recursively "List CO of current dir")
   ("F"  larumbe/clearcase-dired-checkout-current-dir "Check-out dir")
   ("U"  larumbe/clearcase-dired-uncheckout-current-dir "Uncheck-out dir")
+  ("CR" larumbe/clearcase-make-checkout-reserved "Make CO reserved")
+  ("CU" larumbe/clearcase-make-checkout-unreserved "Make CO unreserved")
   ("CE" larumbe/clearcase-edit-checkout-comment "Edit CO comment")
   ("CS" larumbe/clearcase-edcs-edit "Edit Config-Spec")
 
