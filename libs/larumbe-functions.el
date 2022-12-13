@@ -79,6 +79,8 @@ Seems useful to export long compilation logs."
   "Copy current file path to `kill-ring'.
 If optional LINE-NUM is given, copy line to `kill-ring'."
   (interactive "P")
+  (unless (buffer-file-name)
+    (error "Current buffer is not visiting a file!"))
   (let (file-name)
     (if line-num
         (setq file-name (concat (buffer-file-name) ":" (format "%s" (line-number-at-pos))))
