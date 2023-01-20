@@ -155,13 +155,6 @@ If there is no symbol at point, just skip functionality."
 
 
 ;;;###autoload
-(defun larumbe/kill-sexp-backwards ()
-  "Kill sexp backwards."
-  (interactive)
-  (kill-sexp -1))
-
-
-;;;###autoload
 (defun larumbe/insert-time-stamp (&optional regex)
   "Insert time-stamp at header comments.
 Try to add it in line before matching REGEX.
