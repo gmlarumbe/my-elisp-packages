@@ -282,6 +282,24 @@ If passed PARSER, set corresponding regexp to be evaluated at the header."
     (revert-buffer nil t)))
 
 
+;;;###autoload
+(defun larumbe/xrun-uvm-copy-timestamp ()
+  "Copy current UVM timestamp from line at point.
+Requires `compilation-utils' loaded, since it relies on regexps from `larumbe/compilation-error-re-xrun'."
+  (interactive)
+  (unless (string= major-mode "compilation-mode")
+    (error "Could only be used in `compilation-mode'!"))
+  (let* ((line-text (thing-at-point 'line :no-props))
+         (uvm-re (cadr (assoc 'uvm-error larumbe/compilation-error-re-xrun)))
+         (uvm-re-time (concat uvm-re " @ \\(?4:[0-9]+\\) ns"))
+         timestamp)
+    (if (string-match uvm-re-time line-text)
+        (progn
+          (setq timestamp (match-string-no-properties 4 line-text))
+          (kill-new timestamp)
+          (message (concat timestamp " ns")))
+      (message "Not in a UVM report line!"))))
+
 
 ;;;; Interactive comint library
 (defvar larumbe/compilation-interactive-buildcmd nil
