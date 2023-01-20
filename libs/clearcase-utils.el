@@ -578,7 +578,9 @@ Requires:
 
 INFO: Alternative command that also check-ins (untested):
  - ct mkelem -ci -nc */*
-"
+INFO: If there are errors that files cannot be checked in when trying to
+add them to the VOB, try redifining the function
+`clearcase-file-ok-to-checkin' so that it always returns t"
   (interactive)
   (let ((dirs (larumbe/find-subdirectories-recursive (dired-get-filename)))
         files-and-dirs files)
