@@ -210,6 +210,7 @@ If BUF is in use, ask for confirmation to re-use it."
           (error "Aborting compilation!"))
       (switch-to-buffer buf)))
   ;; Compile
+  ;; TODO: Do something to make sure that there are no compilation buffers present when running this
   (compile cmd)
   ;; If BUF does not exist, set up properties from default *compilation*
   (when (and buf
