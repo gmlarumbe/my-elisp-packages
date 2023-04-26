@@ -333,8 +333,8 @@ If UNIVERSAL-ARG is provided, then simulate as well."
 (defvar larumbe/xrun-vivado-installation-path     nil)
 (defvar larumbe/xrun-vivado-simlibs-compiled-path nil)
 (defvar larumbe/xrun-vivado-simlibs '(("unisims"  . "data/verilog/src/unisims")
-                                      ("unifast"  . "data/verilog/src/unisims")
-                                      ("unimacro" . "data/verilog/src/unisims")
+                                      ("unifast"  . "data/verilog/src/unifast")
+                                      ("unimacro" . "data/verilog/src/unimacro")
                                       ("retarget" . "data/verilog/src/retarget")
                                       ("secureip" . "data/secureip")))
 
