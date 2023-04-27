@@ -449,7 +449,6 @@
          (allcomp (all-completions str larumbe/vivado-shell-commands)))
     (list b e allcomp)))
 
-
 (defun larumbe/vivado-shell-send-exit-command ()
   "Send 'exit' command to quit Vivado console."
   (interactive)
@@ -457,12 +456,21 @@
     (comint-send-string proc "exit")
     (comint-send-string proc "\n")))
 
+(defun larumbe/vivado-shell-delchar-or-maybe-eof (num-chars)
+  "Delete character of exit shell depending on context."
+  (interactive "p")
+  (if (and (eobp)
+           (save-excursion
+             (skip-chars-backward " ")
+             (eq (preceding-char) ?%)))
+      (larumbe/vivado-shell-send-exit-command)
+    (delete-char num-chars)))
 
 (define-minor-mode larumbe/vivado-shell-completion-at-point-mode
   "Add extensions for Xilinx Vivado TCL shell.
 Autocompletion based on `vivado' package keywords. "
   :keymap
-  '(("\C-d" . larumbe/vivado-shell-send-exit-command)) ; Should override `comint-delchar-or-maybe-eof'
+  '(("\C-d" . larumbe/vivado-shell-delchar-or-maybe-eof)) ; Should override `comint-delchar-or-maybe-eof'
   (when (not (equal (buffer-name (current-buffer)) larumbe/vivado-shell-buffer))
     (error "Not in Vivado shell buffer!"))
   (make-local-variable 'comint-dynamic-complete-functions) ; Use this variable instead of `completion-at-point-functions' to preserve file-name expansion
@@ -490,6 +498,7 @@ Drawbacks over `inferior-tcl':
         (bufname larumbe/vivado-shell-buffer)
         (parser  "vivado"))
     (larumbe/compilation-interactive command bufname parser)
+    (inferior-tcl-mode)
     (larumbe/vivado-shell-completion-at-point-mode 1)
     (company-mode 1)))
 
