@@ -338,24 +338,33 @@ If passed PARSER, set corresponding regexp to be evaluated at the header."
     (read-only-mode 1)
     (revert-buffer nil t)))
 
-
-;;;###autoload
-(defun larumbe/xrun-uvm-copy-timestamp ()
+(defun larumbe/uvm-copy-timestamp (re-alist)
   "Copy current UVM timestamp from line at point.
 Requires `compilation-utils' loaded, since it relies on regexps from `larumbe/compilation-error-re-xrun'."
-  (interactive)
   (unless (string= major-mode "compilation-mode")
     (error "Could only be used in `compilation-mode'!"))
   (let* ((line-text (thing-at-point 'line :no-props))
-         (uvm-re (cadr (assoc 'uvm-error larumbe/compilation-error-re-xrun)))
-         (uvm-re-time (concat uvm-re " @ \\(?4:[0-9]+\\) ns"))
+         (uvm-re (cadr (assoc 'uvm-error re-alist)))
+         (uvm-re-time (concat uvm-re " @ \\(?4:[0-9]+\\( ns\\)?\\)"))
          timestamp)
     (if (string-match uvm-re-time line-text)
         (progn
           (setq timestamp (match-string-no-properties 4 line-text))
           (kill-new timestamp)
-          (message (concat timestamp " ns")))
+          (message timestamp))
       (message "Not in a UVM report line!"))))
+
+;;;###autoload
+(defun larumbe/uvm-copy-timestamp-xrun ()
+  "Copy current UVM timestamp from line at point for Xcelium regexps."
+  (interactive)
+  (larumbe/uvm-copy-timestamp larumbe/compilation-error-re-xrun))
+
+;;;###autoload
+(defun larumbe/uvm-copy-timestamp-vsim ()
+  "Copy current UVM timestamp from line at point for Modelsim/Questa regexps."
+  (interactive)
+  (larumbe/uvm-copy-timestamp larumbe/compilation-error-re-uvm-modelsim))
 
 
 ;;;; Interactive comint library
