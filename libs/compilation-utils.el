@@ -60,21 +60,70 @@
     (xrun-warning3 "\\(?1:^[a-z]+\\): \\(?2:\\*W\\),\\(?3:[0-9A-Z]+\\):" 1 nil nil 1 nil (1 larumbe/compilation-binary-face) (2 compilation-warning-face) (3 larumbe/compilation-gray-face))
     (xrun-note     "\\(?1:^[a-z]+\\): \\(?2:\\*N\\),\\(?3:[0-9A-Z]+\\)\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?4:[^ \t,]+\\),\\(?5:[0-9]+\\)|\\(?6:[0-9]+\\)\\)" 4 5 6 0 nil (1 larumbe/compilation-binary-face) (2 compilation-info-face) (3 larumbe/compilation-gray-face))
     (xrun-note2    "\\(?1:^[a-z]+\\): \\(?2:\\*N\\),\\(?3:[0-9A-Z]+\\)\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?4:[^ \t,]+\\),\\(?5:[0-9]+\\)\\)" 4 5 nil 0 nil (1 larumbe/compilation-binary-face) (2 compilation-info-face) (3 larumbe/compilation-gray-face))
-    (xrun-note3    "\\(?1:^[a-z]+\\): \\(?2:\\*N\\),\\(?3:[0-9A-Z]+\\):" 1 nil nil 0 nil (1 larumbe/compilation-binary-face) (2 compilation-info-face) (3 larumbe/compilation-gray-face))
-    ;; UVM
-    (uvm-fatal    "^\\(?1:UVM_FATAL\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"   2 3 nil 2 nil (1 compilation-error-face))
+    (xrun-note3    "\\(?1:^[a-z]+\\): \\(?2:\\*N\\),\\(?3:[0-9A-Z]+\\):" 1 nil nil 0 nil (1 larumbe/compilation-binary-face) (2 compilation-info-face) (3 larumbe/compilation-gray-face))))
+
+(defvar larumbe/compilation-error-re-uvm
+  '((uvm-fatal    "^\\(?1:UVM_FATAL\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"   2 3 nil 2 nil (1 compilation-error-face))
     (uvm-fatal2   "^\\(?1:UVM_FATAL\\) @"   1 nil nil 2 nil)
     (uvm-error    "^\\(?1:UVM_ERROR\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"   2 3 nil 2 nil (1 compilation-error-face))
     (uvm-error2   "^\\(?1:UVM_ERROR\\) @"   1 nil nil 2 nil)
     (uvm-warning  "^\\(?1:UVM_WARNING\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))" 2 3 nil 1 nil (1 compilation-warning-face))
     (uvm-warning2 "^\\(?1:UVM_WARNING\\) @" 1 nil nil 1 nil)
     (uvm-info     "^\\(?1:UVM_INFO\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"    2 3 nil 0 nil (1 compilation-info-face))
-    (uvm-info2    "^\\(?1:UVM_INFO\\) @"    1 nil nil 0 nil)
-    ;; OVM
-    (ovm-fatal    "^\\(?1:OVM_FATAL\\) @ \\(?2:[0-9]+\\): "   1 nil nil 2 nil (2 compilation-line-face))
+    (uvm-info2    "^\\(?1:UVM_INFO\\) @"    1 nil nil 0 nil)))
+
+(defvar larumbe/compilation-error-re-uvm-modelsim
+  '((uvm-fatal    "^# \\(?1:UVM_FATAL\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"   2 3 nil 2 nil (1 compilation-error-face))
+    (uvm-fatal2   "^# \\(?1:UVM_FATAL\\) @"   1 nil nil 2 nil)
+    (uvm-error    "^# \\(?1:UVM_ERROR\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"   2 3 nil 2 nil (1 compilation-error-face))
+    (uvm-error2   "^# \\(?1:UVM_ERROR\\) @"   1 nil nil 2 nil)
+    (uvm-warning  "^# \\(?1:UVM_WARNING\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))" 2 3 nil 1 nil (1 compilation-warning-face))
+    (uvm-warning2 "^# \\(?1:UVM_WARNING\\) @" 1 nil nil 1 nil)
+    (uvm-info     "^# \\(?1:UVM_INFO\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"    2 3 nil 0 nil (1 compilation-info-face))
+    (uvm-info2    "^# \\(?1:UVM_INFO\\) @"    1 nil nil 0 nil)))
+
+(defvar larumbe/compilation-error-re-ovm
+  '((ovm-fatal    "^\\(?1:OVM_FATAL\\) @ \\(?2:[0-9]+\\): "   1 nil nil 2 nil (2 compilation-line-face))
     (ovm-error    "^\\(?1:OVM_ERROR\\) @ \\(?2:[0-9]+\\): "   1 nil nil 2 nil (2 compilation-line-face))
     (ovm-warning  "^\\(?1:OVM_WARNING\\) @ \\(?2:[0-9]+\\): " 1 nil nil 1 nil (2 compilation-line-face))
     (ovm-info     "^\\(?1:OVM_INFO\\) @ \\(?2:[0-9]+\\): "    1 nil nil 0 nil (2 compilation-line-face))))
+
+(defvar larumbe/compilation-error-re-modelsim
+  '(;; vlog
+    (vlog-error   "^\\*\\* \\(?1:Error\\)\\( (suppressible)\\)?: \\(?2:[a-zA-Z0-9./_-]+\\)(\\(?3:[0-9]+\\)): \\(?4:([a-zA-Z0-9_-]+) \\)?" 2 3 nil 2 nil (1 compilation-error-face))
+    (vlog-error2  "^\\*\\* \\(?1:Error\\)\\( (suppressible)\\)?: \\(?2:([a-zA-Z0-9_-]+) \\)?\\(?3:[a-zA-Z0-9./_-]+\\)(\\(?4:[0-9]+\\)): " 3 4 nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
+    (vlog-error3  "^\\*\\* \\(?1:Error\\)\\( (suppressible)\\)?: \\(?2:\\(([a-zA-Z0-9_-]+) \\)?\\*\\* while parsing file included at \\(?3:[a-zA-Z0-9./_-]+\\)\\)(\\(?4:[0-9]+\\))\n\\*\\* \\(?5:at\\) \\(?6:[a-zA-Z0-9./_-]+\\)(\\(?7:[0-9]+\\)): " 6 7 nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face) (3 compilation-error-face) (4 compilation-line-face) (5 larumbe/compilation-gray-face))
+    (vlog-error4  "^\\*\\* \\(?1:Error\\)\\( (suppressible)\\)?: \\(?2:([a-zA-Z0-9_-]+) \\)?" nil nil nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
+    (vlog-error5  "^\\*\\* \\(?1:Error\\): \\(?2:([a-zA-Z0-9_-]+) \\)?" nil nil nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
+    (vlog-error6  "^\\*\\* \\(?1:Error\\): " nil nil nil 2 nil (1 compilation-error-face))
+    (vlog-warning "^\\*\\* \\(?1:Warning\\)\\( (suppressible)\\)?: \\(?2:[a-zA-Z0-9./_-]+\\)(\\(?3:[0-9]+\\)): \\(?4:([a-zA-Z0-9_-]+) \\)?" 2 3 nil 1 nil (1 compilation-warning-face))
+    (vlog-warning2 "^\\*\\* \\(?1:Warning\\): \\(?2:([a-zA-Z0-9_-]+) \\)?" nil nil nil 1 nil (1 compilation-warning-face) (2 larumbe/compilation-gray-face))
+    (vlog-warning3 "^\\*\\* \\(?1:Warning\\): " nil nil nil 1 nil (1 compilation-warning-face))
+    (vlog-note "^\\*\\* \\(?1:Note\\): \\(?2:[a-zA-Z0-9./_-]+\\)(\\([0-9]+\\)): " 2 3 nil 0 nil (1 compilation-info-face))
+    (vlog-note2 "^\\*\\* \\(?1:Note\\): " nil nil nil 0 nil (1 compilation-info-face))
+    ;; vsim
+    (vsim-fatal   "^# \\*\\* \\(?1:Fatal\\): \\(?2:([a-zA-Z0-9./_-]+)\\) .*\n#[ ]+\\(?3:Time: [0-9]+ [a-z]s  Iteration: [0-9]+  Instance: [/a-zA-Z0-9_-]+ \\)File: \\(?4:[a-zA-Z0-9./_-]+\\) Line: \\(?5:[0-9]+\\)" 4 5 nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face) (3 larumbe/compilation-gray-face))
+    (vsim-fatal2  "^# \\*\\* \\(?1:Fatal\\): \\(?2:([a-zA-Z0-9./_-]+)\\) \\(?3:[a-zA-Z0-9./_-]+\\)(\\(?4:[0-9]+\\)): " 3 4 nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
+    (vsim-fatal3  "^# \\*\\* \\(?1:Fatal\\): \\(?2:[a-zA-Z0-9./_-]+\\)(\\(?3:[0-9]+\\)): " 2 3 nil 2 nil (1 compilation-error-face))
+    (vsim-fatal4  "^# \\*\\* \\(?1:Fatal\\): \\(?2:([a-zA-Z0-9./_-]+)\\) " nil nil nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
+    (vsim-fatal5  "^# \\*\\* \\(?1:Fatal\\): " nil nil nil 2 nil (1 compilation-error-face))
+    (vsim-error   "^# \\*\\* \\(?1:Error\\): \\(?2:([a-zA-Z0-9./_-]+)\\) .*\n#[ ]+\\(?3:Time: [0-9]+ [a-z]s  Iteration: [0-9]+  Instance: [/a-zA-Z0-9_-]+ \\)File: \\(?4:[a-zA-Z0-9./_-]+\\) Line: \\(?5:[0-9]+\\)" 4 5 nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face) (3 larumbe/compilation-gray-face))
+    (vsim-error2  "^# \\*\\* \\(?1:Error\\( (suppressible)\\)?\\): \\(?2:([a-zA-Z0-9./_-]+)\\) \\(?3:[a-zA-Z0-9./_-]+\\)(\\(?4:[0-9]+\\)): " 3 4 nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
+    (vsim-error3  "^# \\*\\* \\(?1:Error\\( (suppressible)\\)?\\): \\(?2:([a-zA-Z0-9./_-]+)\\)" nil nil nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
+    (vsim-error4  "^# \\*\\* \\(?1:Error\\): \\(?2:([a-zA-Z0-9_-]+) \\)" nil nil nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
+    (vsim-error5  "^# \\*\\* \\(?1:Error\\): " nil nil nil 2 nil (1 compilation-error-face))
+    (vsim-warning "^# \\*\\* \\(?1:Warning\\): \\(?2:([a-zA-Z0-9./_-]+) \[[A-Z]+\]\\) .*\n#[ ]+\\(?3:Time: [0-9]+ [a-z]s  Iteration: [0-9]+  Instance: [/a-zA-Z0-9_-]+ \\)File: \\(?4:[a-zA-Z0-9./_-]+\\) Line: \\(?5:[0-9]+\\)" 4 5 nil 1 nil (1 compilation-warning-face) (2 larumbe/compilation-gray-face) (3 larumbe/compilation-gray-face))
+    (vsim-warning2 "^# \\*\\* \\(?1:Warning\\): \\(?2:([a-zA-Z0-9./_-]+)\\) .*\n#[ ]+\\(?3:Time: [0-9]+ [a-z]s  Iteration: [0-9]+  Region: [/a-zA-Z0-9_-]+ \\)File: \\(?4:[a-zA-Z0-9./_-]+\\)" 4 nil nil 1 nil (1 compilation-warning-face) (2 larumbe/compilation-gray-face) (3 larumbe/compilation-gray-face))
+    (vsim-warning3 "^# \\*\\* \\(?1:Warning\\): \\(?2:([a-zA-Z0-9_-]+) \\)" nil nil nil 1 nil (1 compilation-warning-face) (2 larumbe/compilation-gray-face))
+    (vsim-warning4 "^# \\*\\* \\(?1:Warning\\): " nil nil nil 1 nil (1 compilation-warning-face))
+    (vsim-note "^# \\*\\* \\(?1:Note\\): \\(?2:([a-zA-Z0-9./_-]+)\\) " nil nil nil 0 nil (1 compilation-info-face) (2 larumbe/compilation-gray-face))
+    (vsim-note2 "^# \\*\\* \\(?1:Note\\): " nil nil nil 0 nil (1 compilation-info-face))
+    ;; VHDL severity
+    (vsim-vhdl-failure "^# \\*\\* \\(?1:Failure\\): " nil nil nil 2 nil (1 compilation-error-face))
+    (vsim-vhdl-error   "^# \\*\\* \\(?1:Error\\): "   nil nil nil 2 nil (1 compilation-error-face))
+    (vsim-vhdl-warning "^# \\*\\* \\(?1:Warning\\): " nil nil nil 1 nil (1 compilation-warning-face))
+    (vsim-vhdl-note    "^# \\*\\* \\(?1:Note\\): "    nil nil nil 0 nil (1 compilation-info-face))
+    ))
 
 ;; Fetched from verilog-mode variable: `verilog-error-regexp-emacs-alist'.
 (defvar larumbe/compilation-error-re-verilator
@@ -89,6 +138,11 @@
     (vvp-warning           "^\\(?1:WARNING\\): \\(?2:.*\\):\\(?3:[0-9]+\\):" 2 3 nil   1 nil (1 compilation-warning-face) (2 compilation-warning-face) (3 compilation-line-face))
     (vvp-error             "^\\(?1:ERROR\\): \\(?2:.*\\):\\(?3:[0-9]+\\):"   2 3 nil   2 nil (1 compilation-warning-face) (2 compilation-warning-face) (3 compilation-line-face))
     (vvp-info              "^\\(?1:LXT2 info\\):"                            1 nil nil 0 nil)))
+
+(setq larumbe/compilation-error-re-ghdl
+  '((ghdl-info    "\\(?1:[a-zA-Z0-9./_-]+\\):\\(?2:[0-9]+\\):\\(?3:[0-9]+\\):note: "    1 2 3 0 nil)
+    (ghdl-warning "\\(?1:[a-zA-Z0-9./_-]+\\):\\(?2:[0-9]+\\):\\(?3:[0-9]+\\):warning: " 1 2 3 1 nil)
+    (ghdl-error   "\\(?1:[a-zA-Z0-9./_-]+\\):\\(?2:[0-9]+\\):\\(?3:[0-9]+\\): "         1 2 3 2 nil)))
 
 (defvar larumbe/compilation-error-re-synplify
   '((synp-error     "^@\\(?1:E\\): \\(?2:[A-Z0-9]+\\) :\"\\(?3:[0-9a-zA-Z./_-]+\\)\":\\(?4:[0-9]+\\):\\(?5:[0-9]+\\):" 3 4 5 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
@@ -164,9 +218,11 @@
 (defvar larumbe/compilation-custom-regexp-sets
   '(("verilog-make" . (larumbe/compilation-error-re-iverilog larumbe/compilation-error-re-verilator larumbe/compilation-error-re-vivado))
     ("vivado"       . (larumbe/compilation-error-re-vivado))
-    ("xrun"         . (larumbe/compilation-error-re-xrun))
+    ("xrun"         . (larumbe/compilation-error-re-xrun larumbe/compilation-error-re-uvm larumbe/compilation-error-re-ovm))
+    ("modelsim"     . (larumbe/compilation-error-re-modelsim larumbe/compilation-error-re-uvm-modelsim))
     ("verilator"    . (larumbe/compilation-error-re-verilator))
     ("iverilog"     . (larumbe/compilation-error-re-iverilog))
+    ("ghdl"         . (larumbe/compilation-error-re-ghdl))
     ("synplify"     . (larumbe/compilation-error-re-synplify))
     ("synopsys-dc"  . (larumbe/compilation-error-re-synopsys-dc))
     ("scons"        . (larumbe/compilation-error-re-xrun larumbe/compilation-error-re-vivado larumbe/compilation-error-re-synplify larumbe/compilation-error-re-lattice larumbe/compilation-error-re-scons larumbe/compilation-error-re-python))
