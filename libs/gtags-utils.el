@@ -31,7 +31,7 @@ available at GTAGSCONF globalrc file."
 ;; If cdr of an element is a string use it as the regexp of the file extension
 ;; If cdr of an element is a cons cell, use first element as the regexp and second as the exclude-re
 (defvar larumbe/gtags-create-tags-lang-regexps
-  '(("(System)Verilog" . ("\\.[s]?v[h]?$" . "[^/]+_targets")) ; Exclude re
+  '(("(System)Verilog" . ("\\.[s]?v[h]?$" . "[^/]+design/ip")) ; Exclude re
     ("Python"          . "\\.py$")
     ("Elisp"           . "\\.el$")
     ("c"               . "\\.[ch]\\\(pp\\)?$")
