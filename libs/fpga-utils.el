@@ -35,7 +35,7 @@
     (setq larumbe/fpga-tags-vivado-xpr-file             (nth 1 files-list))
     (setq larumbe/fpga-tags-vivado-gtags-dirs-directory (nth 2 files-list))
     (setq larumbe/fpga-tags-vivado-gtags-dirs-file      (nth 3 files-list))
-    (setq larumbe/fpga-tags-vivado-gtags-file           (larumbe/path-join larumbe/fpga-tags-vivado-gtags-dirs-directory larumbe/fpga-tags-vivado-gtags-dirs-file))))
+    (setq larumbe/fpga-tags-vivado-gtags-file           (file-name-concat larumbe/fpga-tags-vivado-gtags-dirs-directory larumbe/fpga-tags-vivado-gtags-dirs-file))))
 
 
 (defun larumbe/fpga-tags-vivado-convert-xci-to-v-and-downcase ()
@@ -58,7 +58,7 @@ INFO: This is a Workaround for Vivado Naming Conventions at IP Wizard generation
   (with-temp-buffer
     ;; (view-buffer-other-window (current-buffer))      ; Option A: preferred (not valid if modifying the temp buffer)
     ;; (clone-indirect-buffer-other-window "*debug*" t) ; Option B: used here (however, cannot save temp buffer while debugging)
-    (insert-file-contents (larumbe/path-join larumbe/fpga-tags-vivado-xpr-dir larumbe/fpga-tags-vivado-xpr-file))
+    (insert-file-contents (file-name-concat larumbe/fpga-tags-vivado-xpr-dir larumbe/fpga-tags-vivado-xpr-file))
     ;; Start Regexp replacement for file
     (keep-lines "<.*File Path=.*>" (point-min) (point-max))
     (larumbe/replace-regexp-whole-buffer "<.*File Path=\"" "")
@@ -141,7 +141,7 @@ Checks Works in current buffer."
       ;; (view-buffer-other-window (current-buffer))      ; Option A: preferred (not valid since temp buffer cannot be modified)
       ;; (clone-indirect-buffer-other-window "*debug*" t) ; Option B: used here (however, cannot save temp buffer while debugging)
       ;; End of INFO
-      (insert-file-contents (larumbe/path-join larumbe/fpga-tags-altera-tcl-dir larumbe/fpga-tags-altera-tcl-file))
+      (insert-file-contents (file-name-concat larumbe/fpga-tags-altera-tcl-dir larumbe/fpga-tags-altera-tcl-file))
       ;; Start Regexp replacement for file
       (keep-lines larumbe/fpga-tags-altera-tcl-file-regexp (point-min) (point-max)) ; Get only files
       (goto-char (point-min))
@@ -172,7 +172,7 @@ Checks Works in current buffer."
       (larumbe/fpga-tags-altera-find-repeated-included-files) ; Remove repeated files (due to previous directory expansion)
       ;; Make sure expansion is made relative to SVN sandbox path (same as gtags.file path)
       (larumbe/buffer-expand-filenames nil larumbe/fpga-tags-altera-gtags-dirs-directory)
-      (write-file (larumbe/path-join larumbe/fpga-tags-altera-gtags-dirs-directory larumbe/fpga-tags-altera-gtags-dirs-file)))))
+      (write-file (file-name-concat larumbe/fpga-tags-altera-gtags-dirs-directory larumbe/fpga-tags-altera-gtags-dirs-file)))))
 
 
 (defun larumbe/fpga-tags-altera-set-active-project ()
@@ -211,7 +211,7 @@ It will expand these according to the input DIR.
 DANGER: Therefore, make sure DIR is the root project path, where `gtags.files' would be placed.
 
 INFO: Useful function for Verilog-Perl hierarchy extraction."
-  (let ((output-file (larumbe/path-join dir "gtags.files")))
+  (let ((output-file (file-name-concat dir "gtags.files")))
     (unless (or (string= (file-name-nondirectory file) "source_list.tcl")
                 (string= (file-name-nondirectory file) "source_list_script.tcl"))
       (error "Not in 'source_list.tcl file!!"))
@@ -232,7 +232,7 @@ INFO: Useful function for Verilog-Perl hierarchy extraction."
   "Create gtags.files from FILE `source_files.tcl' for Lattice projects.
 
 Similar to `larumbe/fpga-tags-files-from-source-files-tcl-get-files-vivado'."
-  (let ((output-file (larumbe/path-join dir "gtags.files")))
+  (let ((output-file (file-name-concat dir "gtags.files")))
     (unless (or (string= (file-name-nondirectory file) "source_list.tcl")
                 (string= (file-name-nondirectory file) "source_list_script.tcl"))
       (error "Not in 'source_list.tcl file!!"))
@@ -263,7 +263,7 @@ function to parse source_files and extract gtags.files is used.
 Defaults to Xilinx Vivado."
   (interactive)
   (let* ((dir         (projectile-project-root))
-         (syn-tgt-dir (larumbe/path-join dir "syn_targets"))
+         (syn-tgt-dir (file-name-concat dir "syn_targets"))
          (technology)
          (sources-file))
     (unless (file-exists-p syn-tgt-dir)
@@ -367,7 +367,7 @@ If UNIVERSAL-ARG is provided, then simulate as well."
 
 (defun larumbe/xrun-vivado-simlib-reflib-args ()
   "Return precompiled Vivado reflib simlib args."
-  (mapconcat (lambda (lib) (concat "-reflib " (larumbe/path-join larumbe/xrun-vivado-simlibs-compiled-path lib ) ":" lib))
+  (mapconcat (lambda (lib) (concat "-reflib " (file-name-concat larumbe/xrun-vivado-simlibs-compiled-path lib ) ":" lib))
              (larumbe/xrun-vivado-libs)
              " "))
 
@@ -384,7 +384,7 @@ If UNIVERSAL-ARG is provided, then simulate as well."
 
 (defun larumbe/xrun-vivado-glbl-path ()
   "Return path of glbl.v file."
-  (concat (larumbe/path-join larumbe/xrun-vivado-installation-path "data/verilog/src/glbl.v")))
+  (concat (file-name-concat larumbe/xrun-vivado-installation-path "data/verilog/src/glbl.v")))
 
 
 (defun larumbe/xrun-compilation-dir ()
@@ -445,12 +445,12 @@ LIB will be compiled at `larumbe/xrun-vivado-simlibs-compiled-path'."
     ;; Get files and libraries
     (setq vivado-lib-path (cdr (assoc lib larumbe/xrun-vivado-simlibs)))
     (if (string= lib "secureip")
-        (setq lib-files (delete "." (delete ".." (directory-files-recursively (larumbe/path-join larumbe/xrun-vivado-installation-path vivado-lib-path) "\\.vp$"))))
-      (setq lib-files (delete "." (delete ".." (directory-files (larumbe/path-join larumbe/xrun-vivado-installation-path vivado-lib-path) t "\\.[s]?v[h]?$")))))
+        (setq lib-files (delete "." (delete ".." (directory-files-recursively (file-name-concat larumbe/xrun-vivado-installation-path vivado-lib-path) "\\.vp$"))))
+      (setq lib-files (delete "." (delete ".." (directory-files (file-name-concat larumbe/xrun-vivado-installation-path vivado-lib-path) t "\\.[s]?v[h]?$")))))
     (setq lib-files (mapconcat #'identity lib-files " "))
     (setq cmd-lib-args (concat cmd-lib-args
                                "-makelib "
-                               (larumbe/path-join larumbe/xrun-vivado-simlibs-compiled-path lib) " "
+                               (file-name-concat larumbe/xrun-vivado-simlibs-compiled-path lib) " "
                                lib-files " "
                                "-endlib "))
     ;; Build command
@@ -574,7 +574,7 @@ It's faster than Vivado elaboration since it does not elaborate design"
       ("verilog_defspkg"
        (setq output-filename (concat addrmap "_defs_pkg.sv"))))
     ;; Set output filename
-    (setq output-file (larumbe/path-join output-dir output-filename))
+    (setq output-file (file-name-concat output-dir output-filename))
     ;; Set compilation command
     (setq reggen-command
           (concat

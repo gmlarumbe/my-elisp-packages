@@ -264,17 +264,6 @@ the replacement text (see `replace-match' for more info)."
   (larumbe/replace-string string to-string (point-min) nil fixedcase))
 
 
-
-;;;###autoload
-(defun larumbe/path-join (arg1 arg2)
-  "Join path of ARG1 and ARG2.
-If more than 2 args are required, use `f-join'"
-  (if (and arg1 arg2)
-      (concat (file-name-as-directory arg1) arg2)
-    (message "larumbe/path-join: Cannot join path with nil arguments.")
-    nil))
-
-
 ;;;###autoload
 (defun larumbe/find-extensions-major-mode (major-mode)
   "Return a list of strings with extensions currently associated with MAJOR-MODE.
@@ -441,7 +430,7 @@ If optional EXCLUDE-RE is set, delete paths with that regexp from generated file
          (lambda (dir) (insert (mapconcat #'identity (directory-files-recursively dir re nil nil t) "\n")))
          (list base-dir))
         ;; Append to existing filename
-        (when (and (file-exists-p (larumbe/path-join base-dir filename))
+        (when (and (file-exists-p (file-name-concat base-dir filename))
                    append)
           (setq buf (current-buffer))
           (find-file filename)
@@ -451,7 +440,7 @@ If optional EXCLUDE-RE is set, delete paths with that regexp from generated file
         ;; Filter according to optional parameter
         (when exclude-re
           (flush-lines exclude-re (point-min) (point-max)))
-        (write-file (larumbe/path-join base-dir filename))))))
+        (write-file (file-name-concat base-dir filename))))))
 
 
 ;; https://stackoverflow.com/questions/3775377/how-do-you-diff-a-directory-for-only-files-of-a-specific-type
