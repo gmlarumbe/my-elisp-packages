@@ -31,12 +31,13 @@ available at GTAGSCONF globalrc file."
 ;; If cdr of an element is a string use it as the regexp of the file extension
 ;; If cdr of an element is a cons cell, use first element as the regexp and second as the exclude-re
 (defvar larumbe/gtags-create-tags-lang-regexps
-  '(("(System)Verilog" . ("\\.[s]?v[h]?$" . "[^/]+design/ip")) ; Exclude re
-    ("Python"          . "\\.py$")
-    ("Elisp"           . "\\.el$")
-    ("c"               . "\\.[ch]\\\(pp\\)?$")
-    ("VHDL"            . "\\.vhd[l]?$")
-    ("other"           . nil)))
+  '(("(System)Verilog+VHDL" . ("\\.\\(s?vh?\\|vhdl?\\)$" . ".*/design/\\(ip/bd/\\|syn\\)"))
+    ("(System)Verilog"      . ("\\.[s]?v[h]?$"     . ".*/design/\\(ip/bd/\\|syn\\)")) ; Exclude re
+    ("VHDL"                 . ("\\.vhd[l]?$"       . ".*/design/\\(ip/bd/\\|syn\\)"))
+    ("Python"               . "\\.py$")
+    ("Elisp"                . "\\.el$")
+    ("c"                    . "\\.[ch]\\\(pp\\)?$")
+    ("other"                . nil)))
 
 
 ;; INFO: Global does not allow to find external definitions outside project root directory (probably due to security reasons).
