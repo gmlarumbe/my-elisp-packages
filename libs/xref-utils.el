@@ -39,7 +39,7 @@ Optional display references if REF-P is non-nil."
     ;; `dumb-jump' only supports definitions (doesn't provide implementation for xref-find-references)
     ;; Since references would be searched through grep and processed by default `semantic-symref'
     ;; a customized ripgrep command is preferred.
-    (if (equal tag-xref-backend 'dumb-jump)
+    (if (equal tag-xref-backend 'dumb-jump) ; `dumb-jump' does not support reference lookup
         (when (y-or-n-p "[Skipping dumb-jump] No refs found, try ripgrep? ")
           (larumbe/ripgrep-xref ref))
       ;; Find references with corresponding backend
