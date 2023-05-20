@@ -1,7 +1,11 @@
 ;;; simple-utils.el --- Simple.el.gz Utils  -*- lexical-binding: t -*-
 ;;; Commentary:
+;;
+;; Some functions from `simple' to advice to customize my workflow.
+;;
 ;;; Code:
-
+;;
+;;;; Newline
 ;; INFO: Same as `newline' but withouth the (interactive "*" form):
 ;;  - https://www.gnu.org/software/emacs/manual/html_node/elisp/Using-Interactive.html
 ;;  - If ‘*’ appears at the beginning of the string, then an error is signaled if the buffer is read-only.
@@ -91,34 +95,47 @@ A non-nil INTERACTIVE argument means to run the `post-self-insert-hook'."
   nil)
 
 
+;;;; Next-error
+;; At first I tried creating a new customized `next-error-find-buffer-function' with the functionality
+;; now included in `larumbe/next-error-find-buffer'. However, it was not enough. See docstring of `larumbe/next-error-find-buffer'.
+;;
+;; Regarding `next-error-find-buffer-function' with the default behaviour without advice:
+;;   Flycheck sets the value `flycheck-next-error-function' to `next-error-function' when mode is enabled.
+;;   This is needed so that `next-error-buffer-p' can detect current buffer as an active `next-error' buffer.
+;;   This does not happen since current buffer is only detected as an active `next-error' buffer when all the
+;;   rest of the default searches in `next-error' fail, if `next-error-find-buffer-function' is not set.
+;;   On the other hand, using `next-error-buffer-on-selected-frame' as `next-error-find-buffer-function' does
+;;   not work either, because it has the `_avoid-current' default set to t in `next-error-buffer-p' call,
+;;   effectively ignoring current-buffer, even if flycheck is enabled.
+
+;; Summary:
+;;   It is needed to set our own `next-error-find-buffer-function' that takes current buffer in
+;;   flycheck mode into account. This way, flycheck will add the value `flycheck-display-error-at-point' to
+;;   `next-error-hook', since the current buffer is selected as the error buffer.
+;;   However, with this approach, if my own customization `next-error-find-buffer-function' returns nil,
+;;   `next-error-find-buffer' will still try to look in other buffers (even in other windows). Check the
+;;   docstring of advisor function.
+
 ;;;###autoload
-(defun larumbe/next-error-find-buffer-function (&optional avoid-current
-                                                          extra-test-inclusive
-                                                          extra-test-exclusive)
-  "Customized `next-error-find-buffer-function'.
+(defun larumbe/next-error-find-buffer (&optional avoid-current
+                                                 extra-test-inclusive
+                                                 extra-test-exclusive)
+  "Function meant to be used to advice `next-error-find-buffer'.
+
 Let flycheck and compilation-based coexist in a sensible manner.
 
-Flycheck sets the value `flycheck-next-error-function' to `next-error-function' when mode is enabled.
-This is needed so that `next-error-buffer-p' can detect current buffer as an active `next-error' buffer.
-This does not happen since current buffer is only detected as an active `next-error' buffer when all the
-rest of the default searches in `next-error' fail, if `next-error-find-buffer-function' is not set.
-On the other hand, using `next-error-buffer-on-selected-frame' as `next-error-find-buffer-function' does
-not work either, because it has the `_avoid-current' default set to t in `next-error-buffer-p' call,
-effectively ignoring current-buffer, even if flycheck is enabled.
-
-Summary: it is needed to set our own `next-error-find-buffer-function' that takes current buffer in
-flycheck mode into account. This way, flycheck will add the value `flycheck-display-error-at-point' to
-`next-error-hook', since the current buffer is selected as the error buffer.
+It is not enough to create a new function and set it to `next-error-find-buffer-function', since
+in case this one returns nil, `next-error-find-buffer' will still try to find next-error buffers
+according to the default behaviour: e.g. search in other frames, on inactive windows, or even on
+flycheck buffers others than the active one.
 
 Principles:
-
-- 1st) If there is an active next-error search, e.g. any of the values in
-`larumbe/compilation-based-search-buffer-list' (plus any compilation-derived mode
-without the *Help* buffer), is active in current window, return this buffer.
-- 2nd) If current buffer has flycheck enabled, use current buffer with flycheck.
-- 3rd) Fallback to default behaviour returning nil and letting `next-error' do its magic.
-
-Inspired by `next-error-buffer-on-selected-frame'."
+  - 1st) If there is an active next-error search, e.g. any of the values in
+  `larumbe/compilation-based-search-buffer-list' (plus any compilation-derived mode
+  without the *Help* buffer), is active in current window, return this buffer.
+  - 2nd) If current buffer has flycheck enabled, use current buffer with flycheck.
+  - 3rd) Fallback to default behaviour returning nil and letting `next-error' do its magic.
+"
   (let ((frame-windows-buffer-list (mapcar (lambda (win)
                                              (window-buffer win))
                                            (window-list)))

@@ -108,7 +108,7 @@ In case definitions are not found and dumb-jump is detected ask for use it as a 
                    (t
                     (call-interactively #'xref-find-definitions)))))
           ;;   - Python: elpy
-          ((string= major-mode "python-mode")
+          ((string-match "python-" (symbol-name major-mode))
            (if def
                (progn
                  (setq tag-xref-backend (xref-find-backend)) ; Should be elpy if enabled
@@ -172,7 +172,7 @@ and will be applied to only files of current `major-mode' if existing in `larumb
                    (t
                     (call-interactively #'xref-find-references)))))
           (;; Python
-           (string= major-mode "python-mode")
+           (string-match "python-" (symbol-name major-mode))
            (if ref
                (progn
                  (setq tag-xref-backend (xref-find-backend))
