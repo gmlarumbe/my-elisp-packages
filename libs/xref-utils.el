@@ -3,7 +3,6 @@
 ;;; Code:
 
 
-
 (defun larumbe/xref-report-backend (tag backend &optional ref-p)
   "Show in the minibuffer what is the current used BACKEND for TAG.
 
@@ -46,6 +45,7 @@ Optional display references if REF-P is non-nil."
       (xref-find-references ref)
       (larumbe/xref-report-backend ref tag-xref-backend :ref))))
 
+;;;###autoload
 (defun larumbe/xref-find-definitions ()
   "Find definition of symbol at point.
 If pointing a URL/file, visit that URL/file instead.
@@ -99,8 +99,7 @@ In case definitions are not found and dumb-jump is detected ask for use it as a 
                (larumbe/xref-find-definitions-default def)
              ;; Context based jump if no thing-at-point:
              (cond (;; Inside an entity instance
-                    (vhdl-ext-instance-at-point)
-                    (setq def (match-string-no-properties 6))
+                    (setq def (car (vhdl-ext-instance-at-point)))
                     (setq tag-xref-backend (xref-find-backend))
                     (xref-find-definitions def)
                     (larumbe/xref-report-backend def tag-xref-backend))
@@ -122,6 +121,7 @@ In case definitions are not found and dumb-jump is detected ask for use it as a 
              ;; Ask for input if there is no def at point
              (call-interactively #'xref-find-definitions))))))
 
+;;;###autoload
 (defun larumbe/xref-find-references ()
   "Find references of symbol at point using xref.
 
@@ -163,8 +163,7 @@ and will be applied to only files of current `major-mode' if existing in `larumb
                (larumbe/xref-find-references-default ref)
              ;; Context based jump if no thing-at-point:
              (cond (;; Inside an entity instance
-                    (vhdl-ext-instance-at-point)
-                    (setq ref (match-string-no-properties 6))
+                    (setq ref (car (vhdl-ext-instance-at-point)))
                     (setq tag-xref-backend (xref-find-backend))
                     (xref-find-references ref)
                     (larumbe/xref-report-backend ref tag-xref-backend :ref))
