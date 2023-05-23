@@ -11,6 +11,7 @@
 (require 'larumbe-functions)
 (require 'grep-utils)
 
+
 (defun larumbe/xref-report-backend (tag backend &optional ref-p)
   "Show in the minibuffer what is the current used BACKEND for TAG.
 
@@ -28,31 +29,53 @@ Optional display references if REF-P is non-nil."
         (message "[%s] Refs of: %s" formatted-backend formatted-tag)
       (message "[%s] Defs of: %s" formatted-backend formatted-tag))))
 
-(defun larumbe/xref-find-definitions-default (def)
+(defun larumbe/xref--find-def (def)
   "Default action to find DEF in a particular mode."
   (let ((tag-xref-backend (xref-find-backend))
         skip)
-    ;; `dumb-jump' only supports definitions and does some basic processing of them
-    ;; Since sometimes these could not be the desired ones, ask for confirmation
-    (when (and (equal tag-xref-backend 'dumb-jump)
-               (not (y-or-n-p "No definitions found, try dumb-jump? ")))
-      (setq skip t))
-    (unless skip
-      (xref-find-definitions def)
-      (larumbe/xref-report-backend def tag-xref-backend))))
+    ;; Handle `lsp-mode' differently
+    (if (eq tag-xref-backend 'xref-lsp)
+        (let (return-code) ; Propagate error to backend report
+          (setq return-code (lsp-find-definition)) ; On failure, return value will be a propertized string (nil on succes)
+          (if (and (stringp return-code)
+                   (string-match "LSP :: Not found for: " return-code))
+              (message "%s" return-code)
+            (larumbe/xref-report-backend def tag-xref-backend)))
+      ;; Else, try to find definitions unless the found backend is `dumb-jump'.
+      ;; This only supports definitions and does some basic processing of them
+      ;; Since sometimes these could not be the desired ones, ask for confirmation
+      (when (and (equal tag-xref-backend 'dumb-jump)
+                 (not (y-or-n-p "No definitions found, try dumb-jump? ")))
+        (setq skip t))
+      (unless skip
+        (xref-find-definitions def)
+        (larumbe/xref-report-backend def tag-xref-backend)))))
 
-(defun larumbe/xref-find-references-default (ref)
+(defun larumbe/xref--find-ref (ref)
   "Default action to find REF in a particular mode."
   (let ((tag-xref-backend (xref-find-backend)))
-    ;; `dumb-jump' only supports definitions (doesn't provide implementation for xref-find-references)
-    ;; Since references would be searched through grep and processed by default `semantic-symref'
-    ;; a customized ripgrep command is preferred.
-    (if (equal tag-xref-backend 'dumb-jump) ; `dumb-jump' does not support reference lookup
-        (when (y-or-n-p "[Skipping dumb-jump] No refs found, try ripgrep? ")
-          (larumbe/ripgrep-xref ref))
-      ;; Find references with corresponding backend
-      (xref-find-references ref)
-      (larumbe/xref-report-backend ref tag-xref-backend :ref))))
+    (cond (;; Handle `lsp-mode' differently
+           (eq tag-xref-backend 'xref-lsp)
+           (let (return-code) ; Propagate error to backend report
+             (setq return-code (lsp-find-references)) ; On failure, return value will be a propertized string (otherwise a buffer)
+             (if (and (stringp return-code)
+                      (string-match "LSP :: Not found for: " return-code))
+                 (message "%s" return-code)
+               (larumbe/xref-report-backend ref 'lsp :ref))))
+          ;; Else, try to find definitions unless the found backend is `dumb-jump'.
+          ((equal tag-xref-backend 'dumb-jump)
+           ;; `dumb-jump' does not support reference lookup only supports
+           ;; definitions (doesn't provide implementation for
+           ;; xref-find-references).  Since references would be searched through
+           ;; grep and processed by default `semantic-symref' a customized
+           ;; ripgrep command is preferred.
+           (when (y-or-n-p "[Skipping dumb-jump] No refs found, try ripgrep? ")
+             (larumbe/ripgrep-xref ref)))
+          ;; Default
+          (t
+           ;; Find references with corresponding backend
+           (xref-find-references ref)
+           (larumbe/xref-report-backend ref tag-xref-backend :ref)))))
 
 ;;;###autoload
 (defun larumbe/xref-find-definitions (&optional force-backend)
@@ -70,14 +93,17 @@ With optional prefix, prompt for a specific backend to be used."
   (let ((file (thing-at-point 'filename :noprop))
         (url  (thing-at-point 'url      :noprop))
         (def  (thing-at-point 'symbol   :noprop))
-        tag-xref-backend forced-backend)
+        (tag-xref-backend (xref-find-backend)) ; Default found backend
+        forced-backend)
     (cond (;; Force select-backend
-           (and force-backend def)
+           force-backend
            (setq forced-backend (intern (completing-read "Backend: " (remove t xref-backend-functions))))
            (let ((xref-backend-functions `(,forced-backend t)))
-             (setq tag-xref-backend (xref-find-backend))
-             (xref-find-definitions def)
-             (larumbe/xref-report-backend def tag-xref-backend)))
+             (if (not def)
+                 (call-interactively #'xref-find-definitions)
+               (setq tag-xref-backend (xref-find-backend))
+               (xref-find-definitions def)
+               (larumbe/xref-report-backend def tag-xref-backend))))
           ;; URL
           (url
            (browse-url url))
@@ -87,48 +113,45 @@ With optional prefix, prompt for a specific backend to be used."
           ;;   - Org: `org-open-at-point'
           ((string= major-mode "org-mode")
            (call-interactively #'org-open-at-point))
-          ;; `lsp' works a bit different than the rest. Eglot works fine with this custom approach
-          ((bound-and-true-p lsp-mode)
-           (if def
-               (let (return-code) ; Propagate error to backend report
-                 (setq return-code (lsp-find-definition)) ; On failure, return value will be a propertized string (nil on succes)
-                 (if (and (stringp return-code)
-                          (string-match "LSP :: Not found for: " return-code))
-                     (message "%s" return-code)
-                   (larumbe/xref-report-backend def 'lsp)))
-             (call-interactively #'xref-find-definitions)))
           ;; If not pointing to a file choose between different navigation functions
           ;;   - Verilog: try to jump to module at point if not over a tag
           ((or (string= major-mode "verilog-mode")
                (string= major-mode "verilog-ts-mode"))
            (if def
-               (larumbe/xref-find-definitions-default def)
+               (larumbe/xref--find-def def)
              ;; Context based jump if no thing-at-point:
              (cond (;; Inside a module instance
                     (and (or (verilog-ext-point-inside-block 'module)
                              (verilog-ext-point-inside-block 'interface))
                          (verilog-ext-instance-at-point))
                     (setq def (match-string-no-properties 1))
-                    (setq tag-xref-backend (xref-find-backend))
-                    (xref-find-definitions def)
-                    (larumbe/xref-report-backend def tag-xref-backend))
+                    (when (or (eq tag-xref-backend 'xref-lsp) ; eglot and lsp work with ...
+                              (eq tag-xref-backend 'eglot))   ; ... symbol at point
+                      (verilog-ext-find-module-instance-bwd-2)
+                      (unless (string= (thing-at-point 'symbol) def)
+                        (error "[xref-utils]: Error while looking for def with LSP!")))
+                    (larumbe/xref--find-def def))
                    ;; Default fallback
                    (t
                     (call-interactively #'xref-find-definitions)))))
           ((or (string= major-mode "vhdl-mode")
                (string= major-mode "vhdl-ts-mode"))
            (if def
-               (larumbe/xref-find-definitions-default def)
+               (larumbe/xref--find-def def)
              ;; Context based jump if no thing-at-point:
              (cond (;; Inside an entity instance
                     (setq def (car (vhdl-ext-instance-at-point)))
-                    (setq tag-xref-backend (xref-find-backend))
-                    (xref-find-definitions def)
-                    (larumbe/xref-report-backend def tag-xref-backend))
+                    (when (or (eq tag-xref-backend 'xref-lsp) ; eglot and lsp work with ...
+                              (eq tag-xref-backend 'eglot))   ; ... symbol at point
+                      (vhdl-ext-find-entity-instance-bwd)
+                      (goto-char (match-beginning 6))
+                      (unless (string= (thing-at-point 'symbol) def)
+                        (error "[xref-utils]: Error while looking for def with LSP!")))
+                    (larumbe/xref--find-def def))
                    ;; Default fallback
                    (t
                     (call-interactively #'xref-find-definitions)))))
-          ;;   - Python: elpy
+          ;; - Python: elpy
           ((string-match "python-" (symbol-name major-mode))
            (if def
                (progn
@@ -139,7 +162,7 @@ With optional prefix, prompt for a specific backend to be used."
           ;; Default to use xref
           (t
            (if def
-               (larumbe/xref-find-definitions-default def)
+               (larumbe/xref--find-def def)
              ;; Ask for input if there is no def at point
              (call-interactively #'xref-find-definitions))))))
 
@@ -156,37 +179,33 @@ and will be applied to only files of current `major-mode' if existing in `larumb
 With optional prefix, prompt for a specific backend to be used."
   (interactive "P")
   (let ((ref (thing-at-point 'symbol))
-        tag-xref-backend forced-backend)
+        (tag-xref-backend (xref-find-backend)) ; Default found backend
+        forced-backend)
     (cond (;; Force select-backend
-           (and force-backend ref)
+           force-backend
            (setq forced-backend (intern (completing-read "Backend: " (remove t xref-backend-functions))))
            (let ((xref-backend-functions `(,forced-backend t)))
-             (setq tag-xref-backend (xref-find-backend))
-             (xref-find-references ref)
-             (larumbe/xref-report-backend ref tag-xref-backend :ref)))
-          ;; `lsp' works a bit different than the rest. Eglot works fine with this custom approach
-          ((bound-and-true-p lsp-mode)
-           (if ref
-               (let (return-code) ; Propagate error to backend report
-                 (setq return-code (lsp-find-references)) ; On failure, return value will be a propertized string (otherwise a buffer)
-                 (if (and (stringp return-code)
-                          (string-match "LSP :: Not found for: " return-code))
-                     (message "%s" return-code)
-                   (larumbe/xref-report-backend ref 'lsp :ref)))
-             (call-interactively #'xref-find-references)))
+             (if (not ref)
+                 (call-interactively #'xref-find-references)
+               (setq tag-xref-backend (xref-find-backend))
+               (xref-find-references ref)
+               (larumbe/xref-report-backend ref tag-xref-backend :ref))))
           ;; Verilog
           ((or (string= major-mode "verilog-mode")
                (string= major-mode "verilog-ts-mode"))
            (if ref
-               (larumbe/xref-find-references-default ref)
+               (larumbe/xref--find-ref ref)
              ;; Context based jump if no thing-at-point:
              (cond (;; Inside a module instance
                     (and (verilog-ext-point-inside-block 'module)
                          (verilog-ext-instance-at-point))
                     (setq ref (match-string-no-properties 1))
-                    (setq tag-xref-backend (xref-find-backend))
-                    (xref-find-references ref)
-                    (larumbe/xref-report-backend ref tag-xref-backend :ref))
+                    (when (or (eq tag-xref-backend 'xref-lsp) ; eglot and lsp work with ...
+                              (eq tag-xref-backend 'eglot))   ; ... symbol at point
+                      (verilog-ext-find-module-instance-bwd-2)
+                      (unless (string= (thing-at-point 'symbol) ref)
+                        (error "[xref-utils]: Error while looking for def with LSP!")))
+                    (larumbe/xref--find-ref ref))
                    ;; Default fallback
                    (t
                     (call-interactively #'xref-find-references)))))
@@ -194,13 +213,17 @@ With optional prefix, prompt for a specific backend to be used."
           ((or (string= major-mode "vhdl-mode")
                (string= major-mode "vhdl-ts-mode"))
            (if ref
-               (larumbe/xref-find-references-default ref)
+               (larumbe/xref--find-ref ref)
              ;; Context based jump if no thing-at-point:
              (cond (;; Inside an entity instance
                     (setq ref (car (vhdl-ext-instance-at-point)))
-                    (setq tag-xref-backend (xref-find-backend))
-                    (xref-find-references ref)
-                    (larumbe/xref-report-backend ref tag-xref-backend :ref))
+                    (when (or (eq tag-xref-backend 'xref-lsp) ; eglot and lsp work with ...
+                              (eq tag-xref-backend 'eglot))   ; ... symbol at point
+                      (vhdl-ext-find-entity-instance-bwd)
+                      (goto-char (match-beginning 6))
+                      (unless (string= (thing-at-point 'symbol) ref)
+                        (error "[xref-utils]: Error while looking for def with LSP!")))
+                    (larumbe/xref--find-ref ref))
                    ;; Default fallback
                    (t
                     (call-interactively #'xref-find-references)))))
@@ -214,7 +237,7 @@ With optional prefix, prompt for a specific backend to be used."
              (call-interactively #'xref-find-references)))
           ;; Default
           (t (if ref
-                 (larumbe/xref-find-references-default ref)
+                 (larumbe/xref--find-ref ref)
                ;; Ask for input if there is no ref at point
                (call-interactively #'xref-find-references))))))
 
