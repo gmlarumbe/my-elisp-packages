@@ -3,11 +3,20 @@
 ;;; Code:
 
 
+(require 'vhdl-ext-nav)
+(require 'verilog-ext-nav)
+(require 'elpy)
+(require 'lsp-mode)
+(require 'org)
+(require 'larumbe-functions)
+(require 'grep-utils)
+
 (defun larumbe/xref-report-backend (tag backend &optional ref-p)
   "Show in the minibuffer what is the current used BACKEND for TAG.
 
-BACKEND is mandatory to make sure that responsibility of backend reporting comes from the caller.
-E.g: If it was run after finding definitions it would report the active backend of the destination file!
+BACKEND is mandatory to make sure that responsibility of backend reporting comes
+from the caller.  E.g: If it was run after finding definitions it would report
+the active backend of the destination file!
 
 Optional display references if REF-P is non-nil."
   (let (formatted-backend formatted-tag)
@@ -20,7 +29,7 @@ Optional display references if REF-P is non-nil."
       (message "[%s] Defs of: %s" formatted-backend formatted-tag))))
 
 (defun larumbe/xref-find-definitions-default (def)
-  "Default action to take when looking for definitions in a particular mode."
+  "Default action to find DEF in a particular mode."
   (let ((tag-xref-backend (xref-find-backend))
         skip)
     ;; `dumb-jump' only supports definitions and does some basic processing of them
@@ -33,7 +42,7 @@ Optional display references if REF-P is non-nil."
       (larumbe/xref-report-backend def tag-xref-backend))))
 
 (defun larumbe/xref-find-references-default (ref)
-  "Default action to take when looking for references in a particular mode."
+  "Default action to find REF in a particular mode."
   (let ((tag-xref-backend (xref-find-backend)))
     ;; `dumb-jump' only supports definitions (doesn't provide implementation for xref-find-references)
     ;; Since references would be searched through grep and processed by default `semantic-symref'
@@ -52,8 +61,9 @@ If pointing a URL/file, visit that URL/file instead.
 
 Selects between specific xref backends to find definitions.
 
-Assumes that prog-modes will have `dumb-jump' as a fallback backend before etags.
-In case definitions are not found and dumb-jump is detected ask for use it as a backend.
+Assumes that prog-modes will have `dumb-jump' as a fallback backend before
+etags.  In case definitions are not found and dumb-jump is detected ask for use
+it as a backend.
 
 With optional prefix, prompt for a specific backend to be used."
   (interactive "P")
@@ -153,7 +163,7 @@ With optional prefix, prompt for a specific backend to be used."
            (let ((xref-backend-functions `(,forced-backend t)))
              (setq tag-xref-backend (xref-find-backend))
              (xref-find-references ref)
-             (larumbe/xref-report-backend def tag-xref-backend :ref)))
+             (larumbe/xref-report-backend ref tag-xref-backend :ref)))
           ;; `lsp' works a bit different than the rest. Eglot works fine with this custom approach
           ((bound-and-true-p lsp-mode)
            (if ref
