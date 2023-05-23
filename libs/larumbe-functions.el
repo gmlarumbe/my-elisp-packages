@@ -359,7 +359,7 @@ Argument ARG sets `flycheck-mode' non-interactively."
 (defun larumbe/newline-advice (&optional ARG INTERACTIVE)
   "Advice to set :before-until for newline functions of major-modes that
 kill *ag* or *xref* buffers."
-  (let* ((buf-list '("*xref*" "*ag search*" "*ripgrep-search*" "*Help*"))
+  (let* ((buf-list '("*xref*" "*ag search*" "*ripgrep-search*" "*Help*" "*Compile-Log*"))
          buf-win)
     ;; Look for buffers sequentialy and break loop when one is found
     (catch 'found
