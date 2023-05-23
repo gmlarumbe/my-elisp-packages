@@ -46,21 +46,30 @@ Optional display references if REF-P is non-nil."
       (larumbe/xref-report-backend ref tag-xref-backend :ref))))
 
 ;;;###autoload
-(defun larumbe/xref-find-definitions ()
+(defun larumbe/xref-find-definitions (&optional force-backend)
   "Find definition of symbol at point.
 If pointing a URL/file, visit that URL/file instead.
 
 Selects between specific xref backends to find definitions.
 
 Assumes that prog-modes will have `dumb-jump' as a fallback backend before etags.
-In case definitions are not found and dumb-jump is detected ask for use it as a backend."
-  (interactive)
+In case definitions are not found and dumb-jump is detected ask for use it as a backend.
+
+With optional prefix, prompt for a specific backend to be used."
+  (interactive "P")
   (let ((file (thing-at-point 'filename :noprop))
         (url  (thing-at-point 'url      :noprop))
         (def  (thing-at-point 'symbol   :noprop))
-        tag-xref-backend)
-    (cond (;; URL
-           url
+        tag-xref-backend forced-backend)
+    (cond (;; Force select-backend
+           (and force-backend def)
+           (setq forced-backend (intern (completing-read "Backend: " (remove t xref-backend-functions))))
+           (let ((xref-backend-functions `(,forced-backend t)))
+             (setq tag-xref-backend (xref-find-backend))
+             (xref-find-definitions def)
+             (larumbe/xref-report-backend def tag-xref-backend)))
+          ;; URL
+          (url
            (browse-url url))
           ;; File
           ((and file (file-exists-p (larumbe/strip-file-line-number (substitute-in-file-name file))))
@@ -71,9 +80,12 @@ In case definitions are not found and dumb-jump is detected ask for use it as a 
           ;; `lsp' works a bit different than the rest. Eglot works fine with this custom approach
           ((bound-and-true-p lsp-mode)
            (if def
-               (progn
-                 (lsp-find-definition)
-                 (larumbe/xref-report-backend def 'lsp nil))
+               (let (return-code) ; Propagate error to backend report
+                 (setq return-code (lsp-find-definition)) ; On failure, return value will be a propertized string (nil on succes)
+                 (if (and (stringp return-code)
+                          (string-match "LSP :: Not found for: " return-code))
+                     (message "%s" return-code)
+                   (larumbe/xref-report-backend def 'lsp)))
              (call-interactively #'xref-find-definitions)))
           ;; If not pointing to a file choose between different navigation functions
           ;;   - Verilog: try to jump to module at point if not over a tag
@@ -122,23 +134,35 @@ In case definitions are not found and dumb-jump is detected ask for use it as a 
              (call-interactively #'xref-find-definitions))))))
 
 ;;;###autoload
-(defun larumbe/xref-find-references ()
+(defun larumbe/xref-find-references (&optional force-backend)
   "Find references of symbol at point using xref.
 
 Assumes that prog-modes will have `dumb-jump' as a fallback backend before etags.
 In case references are not found, and dumb-jump is detected as a backend, perform a ripgrep instead.
 
 This ripgrep will be executed at `projectile-project-root' or `default-directory'
-and will be applied to only files of current `major-mode' if existing in `larumbe/ripgrep-types'."
-  (interactive)
+and will be applied to only files of current `major-mode' if existing in `larumbe/ripgrep-types'.
+
+With optional prefix, prompt for a specific backend to be used."
+  (interactive "P")
   (let ((ref (thing-at-point 'symbol))
-        tag-xref-backend)
-    (cond (;; `lsp' works a bit different than the rest. Eglot works fine with this custom approach
-           (bound-and-true-p lsp-mode)
+        tag-xref-backend forced-backend)
+    (cond (;; Force select-backend
+           (and force-backend ref)
+           (setq forced-backend (intern (completing-read "Backend: " (remove t xref-backend-functions))))
+           (let ((xref-backend-functions `(,forced-backend t)))
+             (setq tag-xref-backend (xref-find-backend))
+             (xref-find-references ref)
+             (larumbe/xref-report-backend def tag-xref-backend :ref)))
+          ;; `lsp' works a bit different than the rest. Eglot works fine with this custom approach
+          ((bound-and-true-p lsp-mode)
            (if ref
-               (progn
-                 (lsp-find-references)
-                 (larumbe/xref-report-backend ref 'lsp :ref))
+               (let (return-code) ; Propagate error to backend report
+                 (setq return-code (lsp-find-references)) ; On failure, return value will be a propertized string (otherwise a buffer)
+                 (if (and (stringp return-code)
+                          (string-match "LSP :: Not found for: " return-code))
+                     (message "%s" return-code)
+                   (larumbe/xref-report-backend ref 'lsp :ref)))
              (call-interactively #'xref-find-references)))
           ;; Verilog
           ((or (string= major-mode "verilog-mode")
