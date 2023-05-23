@@ -20,6 +20,7 @@ i.e. one absolute file path per line"
       (setq files (split-string (buffer-string) "\n")))
     (ag/search regex directory :files files)))
 
+;;;###autoload
 (defun larumbe/ag-search-project-gtags ()
   "Search `symbol-at-point' based on current projectile project.
 List of files provided by project's \='gtags.files\=' will filter the search."
@@ -63,6 +64,7 @@ List of files provided by project's \='gtags.files\=' will filter the search."
       (setq type (cdr key))
       (list "-t" type))))
 
+;;;###autoload
 (defun larumbe/ripgrep-regexp-symbol-at-point ()
   "Perform ripgrep of current symbol at point in a compilation buffer.
 
@@ -96,6 +98,7 @@ Return the type of file used to perform ripgrep."
   "Hook to run on ripgrep buffers once search has finished."
   (message "[ripgrep-%s] References of: %s" larumbe/ripgrep-current-type larumbe/ripgrep-current-reference))
 
+;;;###autoload
 (defun larumbe/ripgrep-xref (ref)
   "Use `ripgrep' to find xrefs."
   (let (rg-type)
