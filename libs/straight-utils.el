@@ -2,6 +2,8 @@
 ;;; Commentary:
 ;;; Code:
 
+(require 'straight)
+
 ;;;###autoload
 (defun larumbe/straight-not-repo-p (repo)
   "Return true if REPO is not a straight repo."
@@ -15,20 +17,6 @@
     (setq straight-packages (delete (file-name-concat straight-repos-dir ".")  straight-packages))
     (setq straight-packages (delete (file-name-concat straight-repos-dir "..") straight-packages))
     straight-packages))
-
-;;;###autoload
-(defun larumbe/straight-check-dirty-repos ()
-  "Show dirty straight repos/files in *straight-dirty* buffer."
-  (interactive)
-  (unless straight-base-dir
-    (error "Variable `straight-base-dir' not set!"))
-  (larumbe/git-check-dirty-repos (larumbe/straight-packages) "*straight-dirty*"))
-
-;;;###autoload
-(defun larumbe/straight-check-forked-repos ()
-  "Show straight forked repos/files in *straight-forked* buffer."
-  (interactive)
-  (larumbe/git-check-forked-repos (larumbe/straight-packages)))
 
 
 (provide 'straight-utils)

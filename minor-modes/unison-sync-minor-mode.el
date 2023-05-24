@@ -28,6 +28,8 @@
 ;;; Code
 
 
+(require 'popwin)
+
 ;;;; Variables and profiles
 (make-variable-buffer-local (defvar unison-active-profile nil))
 (defvar larumbe/unison-show-process-window nil)

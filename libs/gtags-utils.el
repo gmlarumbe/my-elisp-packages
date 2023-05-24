@@ -1,11 +1,6 @@
 ;;; gtags-utils.el --- Gtags Utils  -*- lexical-binding: t -*-
 ;;; Commentary:
-;;
-;; Global/ctags utils
-;;
-;;
 ;;; Code:
-
 
 ;;;; Dependencies
 (require 'ggtags)
@@ -247,8 +242,6 @@ It spawns a shell in the background that updates tags of current project."
     (larumbe/gtags-update-kill-process)
     (when larumbe/gtags-update-verbose
       (message "Disabled gtags-update-async-minor-mode [current buffer]"))))
-
-
 
 
 (provide 'gtags-utils)

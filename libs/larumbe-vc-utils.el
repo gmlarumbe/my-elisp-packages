@@ -3,8 +3,9 @@
 ;;; Code:
 
 
+(require 'larumbe-functions)
+(require 'straight-utils)
 (require 'magit)
-
 
 ;;;; Repohome
 (defvar larumbe/gite-work-tree (expand-file-name "~"))
@@ -22,7 +23,6 @@ since it needs to be set for the whole magit session, not only for the command."
     (magit-status-setup-buffer larumbe/gite-work-tree)
     (message "Gite arguments set...")))
 
-
 ;; https://emacs.stackexchange.com/questions/3022/reset-custom-variable-to-default-value-programmatically
 ;;;###autoload
 (defun larumbe/repohome-magit-reset-args ()
@@ -30,8 +30,6 @@ since it needs to be set for the whole magit session, not only for the command."
   (interactive)
   (setq magit-git-global-arguments (eval (car (get 'magit-git-global-arguments 'standard-value))))
   (message "Git arguments reset!"))
-
-
 
 ;;;; Git
 ;;;;; Branch merging and checkout
@@ -56,7 +54,6 @@ since it needs to be set for the whole magit session, not only for the command."
       (setq str (split-string (buffer-string)))
       str)))
 
-
 ;; https://stackoverflow.com/questions/25009453/how-to-delete-a-list-of-elements-from-another-list-in-elisp
 ;; It is the same as solution 1 but using delete instead of delq, and printing the value of temp variable at the end
 (defun larumbe/git-exclude-files-before-ediff (merge-files exclude-files)
@@ -69,7 +66,6 @@ since it needs to be set for the whole magit session, not only for the command."
      exclude-files)
     (setq temp temp)))  ; Return only last value after all the iterations
 
-
 (defun larumbe/git-merge-all-files-between-branches (reva revb changed-files)
   "Ediff/Merge every file from CHANGED-FILES.
 Compares same file of revisions REVA and REVB using `magit-ediff-compare'"
@@ -77,7 +73,6 @@ Compares same file of revisions REVA and REVB using `magit-ediff-compare'"
    (lambda (file)
      (magit-ediff-compare reva revb file file))
    changed-files))
-
 
 ;;;###autoload
 (defun larumbe/git-checkout-file-from-another-branch ()
@@ -100,7 +95,6 @@ Compares same file of revisions REVA and REVB using `magit-ediff-compare'"
         magit-git-executable " checkout " fetch-file-to-branch " && "
         magit-git-executable " checkout " fetch-file-from-branch " " filename)))))
 
-
 ;;;###autoload
 (defun larumbe/git-manual-branch-ediff-merge ()
   "Ediff manual merging of every changed file between chosen revisions."
@@ -115,62 +109,23 @@ Compares same file of revisions REVA and REVB using `magit-ediff-compare'"
     ;; Last step would be to merge manually these files
     (larumbe/git-merge-all-files-between-branches rev-a rev-b changed-files)))
 
-
-
-
-;;;; Misc
+;;;;; Misc
 ;;;###autoload
 (defun larumbe/git-pull-all-at-dir (dir)
   "Update all the Git repos in DIR.
 Assumes DIR is formed only by directories and all of them are Git repos.
 Pulls on master branch."
-  (let ((git-repo-list (f-directories dir)))
+  (let ((git-repo-list (larumbe/directories-in-dir dir)))
     (dolist (git-repo git-repo-list)
       (async-shell-command (concat "cd " git-repo " && git checkout master && git pull")))))
 
-
 ;;;###autoload
-(defun larumbe/update-repo-all-at-dir (dir)
-  (let ((repo-sandbox-list (f-directories dir)))
-    (dolist (repo-sandbox repo-sandbox-list)
-      (async-shell-command (concat "cd " repo-sandbox " && update_repo")))))
-
-
-;;;###autoload
-(defun larumbe/git-check-dirty-repos (repos &optional buf)
-  "Show dirty repos/files of every repo in REPOS in *git-dirty* buffer.
-REPOS is assumed to be a list of strings containing the path of each repo.
-
-If optional variable BUF is set show output in BUF, otherwise in *git-dirty* buffer."
+(defun larumbe/git-discard-whitespace-changes ()
+  "Discard only whitespace changes.
+Useful when `untabify-trailing-ws' is non-nil in a buffer
+full of whitespaces to avoid large meaningless diffs."
   (interactive)
-  (unless (executable-find "git")
-    (error "Git is not installed!"))
-  (unless buf
-    (setq buf "*git-dirty*"))
-  (let ((shell-command-dont-erase-buffer t) ; Append output to buffer
-        (cmd))
-    ;; Clean buffer at the beginning
-    (get-buffer-create buf)
-    (with-current-buffer buf
-      (read-only-mode -1)
-      (erase-buffer))
-    ;; Check dirty repos
-    (dolist (repo repos)
-      (message "Checking %s..." repo)
-      (setq cmd (concat "git -C " repo " status --short"))
-      (unless (string= "" (shell-command-to-string cmd))
-        (message "Repo %s has uncommitted changes!" repo)
-        (with-current-buffer buf
-          (goto-char (point-max))
-          (insert "Repo " repo ":\n"))
-        (shell-command cmd buf buf)
-        (with-current-buffer buf
-          (goto-char (point-max))
-          (insert "\n"))))
-    (pop-to-buffer buf)
-    (goto-char (point-min))
-    (git-dirty-mode)))
-
+  (magit--shell-command "git diff -U0 -w --no-color | git apply --cached --ignore-whitespace --unidiff-zero -"))
 
 ;;;###autoload
 (defun larumbe/git-check-forked-repos (repos)
@@ -184,7 +139,7 @@ A repo is considered forked if remote is not tracking origin."
   (let (forked-repos cmd cmd-out remote-branch)
     ;; Check repos
     (dolist (repo repos)
-      (message "Checking if %s is forked..." repo)
+      (message "Checking %s ..." repo)
       ;; (setq cmd (concat "git -C " repo " rev-parse --abbrev-ref --symbolic-full-name @{u}"))
       (setq cmd (concat "git -C " repo " status -sb"))
       ;; (setq cmd (concat "git -C " repo " for-each-ref --format='%(upstream:short)' \"$(git symbolic-ref -q HEAD)\""))
@@ -195,19 +150,14 @@ A repo is considered forked if remote is not tracking origin."
         (push repo forked-repos)))
     forked-repos))
 
-
 ;;;###autoload
-(defun larumbe/emacs-check-dirty-repos (&optional all)
-  "Show dirty emacs-conf files in *emacs-dirty* buffer.
-If prefix-arg or ALL argument is passed, check all my emacs conf repos."
-  (interactive "P")
-  (let (repos)
-    (if current-prefix-arg
-        (setq repos (append larumbe/emacs-conf-repos-core (larumbe/straight-packages)))
-      (setq repos larumbe/emacs-conf-repos-devel))
-    (larumbe/git-check-dirty-repos repos "*emacs-dirty*")))
+(defun larumbe/git-check-forked-repos-straight ()
+  "Show straight forked repos/files in *straight-forked* buffer."
+  (interactive)
+  (larumbe/git-check-forked-repos (larumbe/straight-packages)))
 
 
+;;;; Misc
 ;;;###autoload
 (defun larumbe/set-vc-follow-symlinks ()
   "Set interactively the value of `vc-follow-symlinks'."
@@ -216,14 +166,12 @@ If prefix-arg or ALL argument is passed, check all my emacs conf repos."
     (setq vc-follow-symlinks value)
     (message "`vc-follow-symlinks' set to: %s" vc-follow-symlinks)))
 
-
 ;;;###autoload
-(defun larumbe/git-discard-whitespace-changes ()
-  "Discard only whitespace changes.
-Useful when `untabify-trailing-ws' is non-nil in a buffer
-full of whitespaces to avoid large meaningless diffs."
-  (interactive)
-  (magit--shell-command "git diff -U0 -w --no-color | git apply --cached --ignore-whitespace --unidiff-zero -"))
+(defun larumbe/update-repo-all-at-dir (dir)
+  (let ((repo-sandbox-list (larumbe/directories-in-dir dir)))
+    (dolist (repo-sandbox repo-sandbox-list)
+      (async-shell-command (concat "cd " repo-sandbox " && update_repo")))))
+
 
 
 

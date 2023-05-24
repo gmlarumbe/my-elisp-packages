@@ -18,11 +18,9 @@
 ;;
 ;;; Code:
 
-
 (defvar untabify-trailing-delete-whitespace t) ; Default initial value
 (defvar untabify-trailing-disable-on-files nil
   "List of files where Untabify/Delete trailing whitespace should not be executed.")
-
 
 (defun untabify-trailing-whitespace ()
   "Untabify and delete trailing whitespace depending on MAJOR-MODE of current buffer.
@@ -32,7 +30,6 @@ Meant to be used as a wrapper for write-file-functions hook."
               (member buffer-file-name (mapcar #'expand-file-name untabify-trailing-disable-on-files)))
     (untabify (point-min) (point-max))
     (delete-trailing-whitespace (point-min) (point-max))))
-
 
 ;;;###autoload
 (define-minor-mode untabify-trailing-ws-mode

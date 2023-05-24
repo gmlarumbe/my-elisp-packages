@@ -288,6 +288,12 @@ Make use of `auto-mode-alist' registered extensions."
 Assummes line number is of the form: filepath:[0-9]+"
   (replace-regexp-in-string "\\(?1:.*\\):[0-9]+" "\\1" file))
 
+;;;###autoload
+(defun larumbe/directories-in-dir (dir)
+  "Find directories in DIR non-recursively"
+  (seq-filter #'file-directory-p
+              (remove ".." (remove "." (directory-files dir)))))
+
 
 ;;;; Misc
 ;;;###autoload
