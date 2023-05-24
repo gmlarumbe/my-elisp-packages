@@ -9,7 +9,7 @@
 
 ;;;; Dependencies
 (require 'ggtags)
-
+(require 'larumbe-functions)
 
 ;;;; Auxiliar functions
 ;;;###autoload
@@ -46,7 +46,7 @@ available at GTAGSCONF globalrc file."
 ;;   - Make use of GTAGSLIBPATH environment variable.
 ;; Associated thread: https://emacs.stackexchange.com/questions/13254/find-external-definition-with-gtags-or-ggtags
 (defun larumbe/gtags-create-tags-filelist-create (regex &optional exclude-re dir append)
-  "Generate gtags.files on current directory for tags in directory DIR if it is set.
+  "Generate gtags.files on current directory for tags in DIR if it is set.
 Include files that match REGEX.
 If EXCLUDE-RE is set, delete paths with that regexp from generated file.
 If DIR is not specified, use current-directory.
@@ -57,7 +57,6 @@ If APPEND is set, append directory files to already existing tags file."
       (setq tags-dir default-directory))
     (message "Creating gtags.files ...")
     (larumbe/directory-files-recursively-to-file tags-dir "gtags.files" regex append exclude-re)))
-
 
 (defun larumbe/gtags-create-tags-async-sentinel (process signal)
   "Sentinel for asynchronous gtags creation."
@@ -70,7 +69,6 @@ If APPEND is set, append directory files to already existing tags file."
      ('t
       (message "#'larumbe/gtags-create-tags-async-sentinel: %s failed with error code %s" buf signal)
       (display-buffer buf)))))
-
 
 (defun larumbe/gtags-create-tags-async-kill-buf-sentinel (process signal)
   "Sentinel for asynchronous gtags creation.
@@ -85,7 +83,6 @@ Kills gtags buffer after finishing the process if created sucessfully."
      ('t
       (message "#'larumbe/gtags-create-tags-async-kill-buf-sentinel: %s failed with error code %s" buf signal)
       (display-buffer buf)))))
-
 
 (defun larumbe/gtags-create-tags-async-process (dir &optional bufname kill-buf)
   "Spawn shell and execute gtags asynchronously at directory DIR.
@@ -102,8 +99,6 @@ If optional KILL-BUF is non-nil, create a sentinel that kills the process buffer
       (async-shell-command (concat "cd " dir " && " gtags-cmd) output-buffer))
     (message "Started gtags at buffer %s" output-buffer)
     (set-process-sentinel (get-buffer-process output-buffer) sentinel)))
-
-
 
 ;;;###autoload
 (defun larumbe/gtags-create-tags-async (&optional dir lang bufname kill-buf)
@@ -129,7 +124,7 @@ at `default-directory'. If called interactively with prefix, prompt for DIR and 
       (setq lang (car (car lang-regexps))))
     ;; Prompt for dir and lang if called interactively with prefix
     (when (and current-prefix-arg
-               (called-interactively-p))
+               (called-interactively-p 'any))
       (setq dir (read-directory-name "Directory: "))
       (setq lang (completing-read "Lang: " (mapcar #'car lang-regexps))))
     ;; Set variable values
@@ -156,7 +151,6 @@ at `default-directory'. If called interactively with prefix, prompt for DIR and 
     (larumbe/gtags-create-tags-filelist-create regex exclude-re dir) ; Do not append created tags to existing file
     ;; Execute gtags
     (larumbe/gtags-create-tags-async-process dir bufname kill-buf)))
-
 
 ;;;###autoload
 (defun larumbe/gtags-create-tags-async-dirs (dirs)
@@ -189,7 +183,6 @@ to current buffer, if existing."
       (set-process-query-on-exit-flag (get-process proc) nil)
       (message "Started %s" buf))))
 
-
 (defun larumbe/gtags-update-kill-process ()
   "Kill gtags-update process.
 Clean-up of buffer/window done by corresponding sentinel."
@@ -200,11 +193,9 @@ Clean-up of buffer/window done by corresponding sentinel."
           (message "Finished gtags-update"))
       (message "gtags-update was not running!"))))
 
-
 (defun larumbe/gtags-update-send-string (str)
   "Utility function to send commands to gtags-update process."
   (process-send-string larumbe/gtags-update-proc-name (concat str "\n")))
-
 
 (defun larumbe/gtags-update-try-update ()
   "Try to update gtags of current project, if existing."
@@ -214,7 +205,6 @@ Clean-up of buffer/window done by corresponding sentinel."
       (larumbe/gtags-update-send-string "global -u -v")
       (when larumbe/gtags-update-verbose
         (message "Trying gtags-update of dir: %s" dir)))))
-
 
 (defun larumbe/gtags-update-filter (process output)
   "Filter to report status depending on process output."
@@ -234,14 +224,12 @@ Clean-up of buffer/window done by corresponding sentinel."
        (t
         (insert output))))))
 
-
 (defun larumbe/gtags-update-sentinel (process signal)
   "Sentinel that cleans up buffer and window of spawned shell."
   (let* ((buf (process-buffer process))
          (win (get-buffer-window buf)))
     (when win
       (quit-window t win))))
-
 
 ;;;###autoload
 (define-minor-mode gtags-update-async-minor-mode

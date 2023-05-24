@@ -2,6 +2,9 @@
 ;;; Commentary:
 ;;; Code:
 
+(require 'dired)
+(require 'dired-async)
+
 (defun larumbe/dired-jump (arg)
   "Execute `dired-jump'.
 With universal ARG, delete every dired-mode buffer to have only 1 dired buffer.

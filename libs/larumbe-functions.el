@@ -3,6 +3,9 @@
 ;;; Code:
 
 
+(require 'xref)
+
+
 ;;;; Window resizing
 (defvar larumbe/shrink-window-horizontally-delta   15)
 (defvar larumbe/shrink-window-vertically-delta      5)
@@ -95,10 +98,10 @@ If optional LINE-NUM is given, copy line to `kill-ring'."
 ;;;###autoload
 (defun larumbe/find-file-dwim ()
   "Wrapper for `find-file-at-point'.
-Avoids asking for the file input if point is over a file that exists.
-If it does not exist prompt for regular completion framework input.
-Push to the xref marker stack to be able to navigate back to original file.
-Supports shell envs in the filename and jump to line if file is of the form: file:[0-9]+"
+Avoids asking for the file input if point is over a file that exists.  If it
+does not exist prompt for regular completion framework input.  Push to the xref
+marker stack to be able to navigate back to original file.  Supports shell envs
+in the filename and jump to line if file is of the form: file:[0-9]+"
   (interactive)
   (let* ((raw-filename (thing-at-point 'filename :noprops))
          expanded-filename filename bounds line-num)
@@ -123,7 +126,7 @@ Supports shell envs in the filename and jump to line if file is of the form: fil
            (xref-push-marker-stack)
            (find-file-at-point filename)
            (unless (equal line-num nil)
-             (goto-line line-num)))
+             (forward-line line-num)))
           (t
            (find-file-at-point)
            (message "Unexpected case in `larumbe/find-file-dwim'!")))))
@@ -265,14 +268,14 @@ the replacement text (see `replace-match' for more info)."
 
 
 ;;;###autoload
-(defun larumbe/find-extensions-major-mode (major-mode)
+(defun larumbe/find-extensions-major-mode (mode)
   "Return a list of strings with extensions currently associated with MAJOR-MODE.
 Make use of `auto-mode-alist' registered extensions."
   (let ((alist (copy-alist auto-mode-alist))
         (alist-elm)
         (ext)
         (ext-list))
-    (while (setq alist-elm (rassoc major-mode alist))
+    (while (setq alist-elm (rassoc mode alist))
       (delete alist-elm alist)
       (setq ext (car alist-elm))
       (push ext ext-list))
@@ -315,35 +318,6 @@ Assummes line number is of the form: filepath:[0-9]+"
     (setq larumbe/current-font-size size)))
 
 
-;;;###autoload
-(defun larumbe/flycheck-eldoc-toggle ()
-  "Disable `eldoc-mode' when enabling `flycheck-mode' to avoid minibuffer conflicts."
-  (interactive)
-  (if eldoc-mode
-      (progn
-        (eldoc-mode -1)
-        (flycheck-mode 1)
-        (message "Flycheck enabled"))
-    (eldoc-mode 1)
-    (flycheck-mode -1)
-    (message "Flycheck disabled")))
-
-
-;;;###autoload
-(defun larumbe/flycheck-eldoc-mode (&optional arg)
-  "Flycheck-mode wrapper function.
-Disable function `eldoc-mode' if flycheck is enabled
-to avoid minibuffer collisions.
-Argument ARG sets `flycheck-mode' non-interactively."
-  (interactive)
-  ;; Non-interactive
-  (if arg
-      (progn
-        (flycheck-mode arg)
-        (eldoc-mode (* -1 arg)))
-    ;; Interactive
-    (larumbe/flycheck-eldoc-toggle)))
-
 
 ;;;###autoload
 (defun larumbe/scratch-toggle ()
@@ -359,7 +333,10 @@ Argument ARG sets `flycheck-mode' non-interactively."
 (defun larumbe/newline-advice (&optional ARG INTERACTIVE)
   "Advice to set :before-until for newline functions of major-modes that
 kill *ag* or *xref* buffers."
-  (let* ((buf-list '("*xref*" "*ag search*" "*ripgrep-search*" "*Help*" "*Compile-Log*"))
+  (let* ((buf-list '("*xref*" "*ag search*" "*ripgrep-search*" "*Help*"))
+         ;; INFO: At some point tried to add the "*Compile-Log*" buffer, but very
+         ;; rare bugs appeared when byte/native compiling, removing code from
+         ;; current buffer...
          buf-win)
     ;; Look for buffers sequentialy and break loop when one is found
     (catch 'found
@@ -462,7 +439,8 @@ is no include option for `diff' utils."
                             "source_list.tcl"
                             "run_vivado.tcl")))
     (setq exclude-file (concat (file-name-directory out-file) "exclude.pats"))
-    (f-write-text (larumbe/print-elements-of-list-of-strings exclude-patterns) 'utf-8 exclude-file)
+    (with-temp-file exclude-file
+      (insert (larumbe/print-elements-of-list-of-strings exclude-patterns)))
     ;; If return value is `1' is because differences were found
     (start-process-shell-command
      "*diff-dirs*" nil
@@ -478,30 +456,32 @@ is no include option for `diff' utils."
 ;; INFO: Currently, autoloads are managed by `straight' by placing packages inside Git repos.
 ;; If for some reason, any package function needs to be autoloaded by using this function,
 ;; it would be necessary to first load this package in the init file.
+;;
+;; At some point, the package `autoload' seemed deprecated in favor of loaddefs
 
-(defvar larumbe/autoloads-local-dir (concat user-emacs-directory "local-autoloads")
+(defvar larumbe/autoloads-local-dir (file-name-concat user-emacs-directory "local-autoloads")
   "Emacs directory for local packages generated autoloads.")
 
 ;;;###autoload
-(defun larumbe/autoloads-file (file)
-  "Generate autoloads for FILE in `larumbe/autoloads-local-dir' directory and load them.
+(defun larumbe/autoloads-dir (dir)
+  "Generate autoloads for files in DIR in `larumbe/autoloads-local-dir' directory and load them.
 
 This could be used to generate autoloads from the magic comments
 instead of :command keyword inside a use-package macro, e.g:
 
 (use-package my-pkg
   :init
-  (larumbe/autoloads-file \"~/.elisp/pkg/some-pkg.el\"))
+  (larumbe/autoloads-dir \"~/.elisp/pkg/some-pkg.el\"))
 
 This would be a manual approach without adding each new function to the :commands keyword,
 nor using a package manager (i.e. straight) that handles autoloads automatically."
   (let* ((autoloads-dir larumbe/autoloads-local-dir)
-         (filename (file-name-nondirectory (file-name-sans-extension file)))
-         (generated-autoload-file (concat autoloads-dir "/" filename "-autoloads.el")))
+         (dirname (file-name-nondirectory (directory-file-name dir)))
+         (generated-autoloads-file (file-name-concat autoloads-dir (concat dirname "-autoloads.el"))))
     (unless (file-exists-p autoloads-dir)
       (make-directory autoloads-dir))
-    (update-file-autoloads file t)
-    (load-file generated-autoload-file)))
+    (loaddefs-generate dir generated-autoloads-file)
+    (load-file generated-autoloads-file)))
 
 
 

@@ -3,8 +3,11 @@
 ;;; Code:
 
 
-(defvar larumbe/hdl-source-extension-regex "\\(.sv$\\|.v$\\|.svh$\\|.vh$\\|.vhd$\\)")
+(require 'larumbe-functions)
+(require 'gtags-utils)
+(require 'compilation-utils)
 
+(defvar larumbe/hdl-source-extension-regex "\\(.sv$\\|.v$\\|.svh$\\|.vh$\\|.vhd$\\)")
 
 ;;;; Vivado tags
 ;; Projects list for the `larumbe/fpga-tags-vivado-list':
@@ -50,7 +53,7 @@ INFO: This is a Workaround for Vivado Naming Conventions at IP Wizard generation
         (progn
           (replace-match "\\1.v")
           (re-search-backward "/")
-          (downcase-region (point) (point-at-eol))))))
+          (downcase-region (point) (line-end-position))))))
 
 
 (defun larumbe/fpga-tags-vivado-files-from-xpr ()
@@ -262,7 +265,7 @@ Ask for used technology. Depending on this parameter, a different
 function to parse source_files and extract gtags.files is used.
 Defaults to Xilinx Vivado."
   (interactive)
-  (let* ((dir         (projectile-project-root))
+  (let* ((dir (project-root (project-current)))
          (syn-tgt-dir (file-name-concat dir "syn_targets"))
          (technology)
          (sources-file))
