@@ -102,8 +102,10 @@ With optional prefix, prompt for a specific backend to be used."
              (if (not def)
                  (call-interactively #'xref-find-definitions)
                (setq tag-xref-backend (xref-find-backend))
-               (xref-find-definitions def)
-               (larumbe/xref-report-backend def tag-xref-backend))))
+               (if (not tag-xref-backend)
+                   (user-error "[xref-utils]: Could not find definitions for `%s' with [%s]" def (symbol-name forced-backend))
+                 (xref-find-definitions def)
+                 (larumbe/xref-report-backend def tag-xref-backend)))))
           ;; URL
           (url
            (browse-url url))
@@ -188,8 +190,10 @@ With optional prefix, prompt for a specific backend to be used."
              (if (not ref)
                  (call-interactively #'xref-find-references)
                (setq tag-xref-backend (xref-find-backend))
-               (xref-find-references ref)
-               (larumbe/xref-report-backend ref tag-xref-backend :ref))))
+               (if (not tag-xref-backend)
+                   (user-error "[xref-utils]: Could not find references for `%s' with [%s]" ref (symbol-name forced-backend))
+                 (xref-find-references ref)
+                 (larumbe/xref-report-backend ref tag-xref-backend :ref)))))
           ;; Verilog
           ((or (string= major-mode "verilog-mode")
                (string= major-mode "verilog-ts-mode"))
