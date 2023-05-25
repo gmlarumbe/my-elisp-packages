@@ -3,13 +3,16 @@
 ;;; Code:
 
 
-(require 'vhdl-ext-nav)
-(require 'verilog-ext-nav)
+;; External
 (require 'elpy)
 (require 'lsp-mode)
 (require 'org)
+;; Internal
 (require 'larumbe-functions)
 (require 'grep-utils)
+;; Verilog/VHDL Extensions
+(require 'vhdl-ext-nav)
+(require 'verilog-ext-nav)
 
 
 (defun larumbe/xref-report-backend (tag backend &optional ref-p)
