@@ -148,14 +148,16 @@ Principles:
                 (when (string= (buffer-name buf) search-buf)
                   (throw 'found buf)))))
           ;; Otherwise look for next-error capable buffers in current window (e.g. *compilation*)
-          ;; that are not flycheck buffers
+          ;; that are not flycheck/vterm buffers
           (dolist (buf frame-windows-buffer-list)
             (with-current-buffer buf
               (when (and (next-error-buffer-p buf nil extra-test-inclusive extra-test-exclusive) ; INFO: Do not ignore current buffer!
-                         (not (eq next-error-function 'flycheck-next-error-function)))
+                         (not (eq next-error-function 'flycheck-next-error-function))
+                         (not (eq next-error-function 'vterm-next-error-function)))
                 (throw 'found buf))))
-          ;; Finally check ONLY current flycheck buffer
-          (when (eq next-error-function 'flycheck-next-error-function)
+          ;; Finally check ONLY current flycheck/vterm buffer
+          (when (or (eq next-error-function 'flycheck-next-error-function)
+                    (eq next-error-function 'vterm-next-error-function))
             (throw 'found (current-buffer))))
         ;; Else return error of not found buffers
         (error "No buffers contain error message locations"))))
