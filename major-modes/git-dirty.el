@@ -56,15 +56,24 @@
 (defun git-dirty-magit ()
   "Run `magit' on repo where the point is at."
   (interactive)
-  (let (repo-name)
+  (let (repo-name file-name)
     (save-excursion
       (goto-char (line-beginning-position))
       (when (re-search-forward "^Repo " (line-end-position) t)
-        (setq repo-name (thing-at-point 'filename t))
-        (setq repo-name (string-remove-suffix ":" repo-name))))
-    (if repo-name
+        (setq repo-name (string-remove-suffix ":" (thing-at-point 'filename t)))))
+    (if repo-name                       ;
         (magit-status-setup-buffer repo-name)
-      (error "Point must be at 'Repo' line, not at a file!"))))
+      ;; If it's not a repo, then it's either a file or a blank line between repos
+      (if (setq file-name (cadr (split-string (thing-at-point 'line :no-props))))
+          ;; Find which repo it belongs to and open the file
+          (save-excursion
+            (when (re-search-backward "^Repo " nil t)
+              (goto-char (match-end 0))
+              (forward-char)
+              (setq repo-name (string-remove-suffix ":" (thing-at-point 'filename t))))
+            (find-file-other-window (file-name-concat repo-name file-name)))
+        ;; Else it's a blank line
+        (error "Point must be at 'Repo' line or over a file")))))
 
 ;;;###autoload
 (defun git-dirty-check-repos (repos &optional buf)
