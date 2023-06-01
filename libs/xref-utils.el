@@ -115,9 +115,6 @@ With optional prefix, prompt for a specific backend to be used."
           ;; File
           ((and file (file-exists-p (larumbe/strip-file-line-number (substitute-in-file-name file))))
            (larumbe/find-file-dwim))
-          ;;   - Org: `org-open-at-point'
-          ((string= major-mode "org-mode")
-           (call-interactively #'org-open-at-point))
           ;; If not pointing to a file choose between different navigation functions
           ;;   - Verilog: try to jump to module at point if not over a tag
           ((or (string= major-mode "verilog-mode")
