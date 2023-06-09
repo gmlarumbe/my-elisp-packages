@@ -139,11 +139,6 @@
     (vvp-error             "^\\(?1:ERROR\\): \\(?2:.*\\):\\(?3:[0-9]+\\):"   2 3 nil   2 nil (1 compilation-warning-face) (2 compilation-warning-face) (3 compilation-line-face))
     (vvp-info              "^\\(?1:LXT2 info\\):"                            1 nil nil 0 nil)))
 
-(setq larumbe/compilation-error-re-ghdl
-  '((ghdl-info    "\\(?1:[a-zA-Z0-9./_-]+\\):\\(?2:[0-9]+\\):\\(?3:[0-9]+\\):note: "    1 2 3 0 nil)
-    (ghdl-warning "\\(?1:[a-zA-Z0-9./_-]+\\):\\(?2:[0-9]+\\):\\(?3:[0-9]+\\):warning: " 1 2 3 1 nil)
-    (ghdl-error   "\\(?1:[a-zA-Z0-9./_-]+\\):\\(?2:[0-9]+\\):\\(?3:[0-9]+\\): "         1 2 3 2 nil)))
-
 (defvar larumbe/compilation-error-re-synplify
   '((synp-error     "^@\\(?1:E\\): \\(?2:[A-Z0-9]+\\) :\"\\(?3:[0-9a-zA-Z./_-]+\\)\":\\(?4:[0-9]+\\):\\(?5:[0-9]+\\):" 3 4 5 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
     (synp-error2    "^@\\(?1:E\\): \\(?2:[A-Z0-9]+\\) [:]?|" 1 nil nil 2 nil (2 larumbe/compilation-gray-face))
