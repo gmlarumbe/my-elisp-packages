@@ -20,7 +20,7 @@ Provides a more convenient solution to cluttering dired buffers than `dired-sing
          (let* ((pwd-file "/tmp/vterm-last-dir")
                 (pwd-cmd (concat "echo -n $(pwd) > " pwd-file "\n"))
                 (default-directory default-directory)) ; Save global status of `default-directory'
-           (larumbe/sh-send-string-vterm pwd-cmd)
+           (larumbe/sh-send-string-vterm pwd-cmd (current-buffer))
            (sleep-for 0.15) ; Without this line point moved far above in *vterm*
            (setq default-directory (shell-command-to-string (concat "cat " pwd-file)))
            (dired-jump)))
