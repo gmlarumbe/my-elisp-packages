@@ -1,16 +1,18 @@
 ;;; magit-difft.el --- Difftastic integration with Magit  -*- lexical-binding: t -*-
 ;;; Commentary:
 ;;
-;; https://tsdh.org/posts/2022-08-01-difftastic-diffing-with-magit.html
-;; https://shivjm.blog/better-magit-diffs/
-;; https://www.reddit.com/r/emacs/comments/123khq4/better_magit_diffs_with_delta_and_difftastic/
-;; https://www.reddit.com/r/emacs/comments/tr42hl/how_to_configure_magit_with_difftastic/
-;; https://github.com/Bitnut/diffgit
+;; Implementation from:
+;;   - https://tsdh.org/posts/2022-08-01-difftastic-diffing-with-magit.html
+;;   - https://shivjm.blog/better-magit-diffs/
+;;
+;; Other threads
+;;   - https://www.reddit.com/r/emacs/comments/123khq4/better_magit_diffs_with_delta_and_difftastic/
+;;   - https://www.reddit.com/r/emacs/comments/tr42hl/how_to_configure_magit_with_difftastic/
+;;   - https://github.com/Bitnut/diffgit
 ;;
 ;;; Code:
 
 (require 'ansi-color)
-;; (require 'magit)
 (require 'magit-delta)
 
 ;;;; Integration
@@ -39,6 +41,7 @@
                    (with-current-buffer (process-buffer proc)
                      (goto-char (point-min))
                      (ansi-color-apply-on-region (point-min) (point-max))
+                     (aankh/recolor-difftastic) ; DANGER: Only change wrt original th/* function
                      (setq buffer-read-only t)
                      (view-mode)
                      (end-of-line)
@@ -108,19 +111,22 @@
      (get-buffer-create name)
      `("git" "--no-pager" "diff" "--ext-diff" ,@(when arg (list arg))))))
 
-(transient-define-prefix th/magit-aux-commands ()
-  "My personal auxiliary magit commands."
-  ["Auxiliary commands"
-   ("d" "Difftastic Diff (dwim)" th/magit-diff-with-difftastic)
-   ("s" "Difftastic Show" th/magit-show-with-difftastic)])
+;; INFO: Preferred not use the proposed keybindings
+;; (transient-define-prefix th/magit-aux-commands ()
+;;   "My personal auxiliary magit commands."
+;;   ["Auxiliary commands"
+;;    ("d" "Difftastic Diff (dwim)" th/magit-diff-with-difftastic)
+;;    ("s" "Difftastic Show" th/magit-show-with-difftastic)])
 
-(transient-append-suffix 'magit-dispatch "!"
-  '("#" "My Magit Cmds" th/magit-aux-commands))
+;; (transient-append-suffix 'magit-dispatch "!"
+;;   '("#" "My Magit Cmds" th/magit-aux-commands))
 
-(define-key magit-status-mode-map (kbd "#") #'th/magit-aux-commands)
+;; (define-key magit-status-mode-map (kbd "#") #'th/magit-aux-commands)
+;; End of INFO
 
 
-;; TODO: Still check this one: https://shivjm.blog/better-magit-diffs/
+;;;; Improve difftastic colors overriding ansi-color overlays
+;; https://shivjm.blog/better-magit-diffs/
 (defun aankh/toggle-magit-delta ()
   (interactive)
   (magit-delta-mode
@@ -129,8 +135,20 @@
      1))
   (magit-refresh))
 
+(defun larumbe/toggle-magit-delta ()
+  (interactive)
+   (if magit-delta-mode
+       (progn
+         (magit-delta-mode -1)
+         (message "Disabled magit-delta"))
+     (magit-delta-mode 1)
+     (message "Enabled magit-delta"))
+   (magit-refresh))
+
+;; INFO: Preferred not to use this proposed keybinding
 ;; (transient-append-suffix 'magit-diff '(-1 -1 -1)
 ;;   '("l" "Toggle magit-delta" aankh/toggle-magit-delta))
+;; End of INFO
 
 (defconst +aankh/difftastic-colour-remapping+
   `(("red2" . "#a8353e") ;; https://oklch.com/#50,0.15,20,100
@@ -159,7 +177,7 @@
 ;; For some reason, this was being called twice without the guard.
 (unless (boundp 'aankh/added-magit-diff-suffixes)
   (transient-append-suffix 'magit-diff '(-1 -1)
-    [("l" "Toggle magit-delta" aankh/toggle-magit-delta)
+    [("l" "Toggle magit-delta" larumbe/toggle-magit-delta)
      ("D" "Difftastic Diff (dwim)" th/magit-diff-with-difftastic)
      ("S" "Difftastic Show" th/magit-show-with-difftastic)]))
 (defvar aankh/added-magit-diff-suffixes t)
