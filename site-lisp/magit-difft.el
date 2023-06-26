@@ -9,6 +9,10 @@
 ;;
 ;;; Code:
 
+(require 'ansi-color)
+;; (require 'magit)
+(require 'magit-delta)
+
 ;;;; Integration
 ;; https://tsdh.org/posts/2022-08-01-difftastic-diffing-with-magit.html
 (defun th/magit--with-difftastic (buffer command)
@@ -110,12 +114,10 @@
    ("d" "Difftastic Diff (dwim)" th/magit-diff-with-difftastic)
    ("s" "Difftastic Show" th/magit-show-with-difftastic)])
 
-(with-eval-after-load 'magit
-  (transient-append-suffix 'magit-dispatch "!"
-    '("#" "My Magit Cmds" th/magit-aux-commands))
+(transient-append-suffix 'magit-dispatch "!"
+  '("#" "My Magit Cmds" th/magit-aux-commands))
 
-  (define-key magit-status-mode-map (kbd "#") #'th/magit-aux-commands)
-)
+(define-key magit-status-mode-map (kbd "#") #'th/magit-aux-commands)
 
 
 ;; TODO: Still check this one: https://shivjm.blog/better-magit-diffs/
@@ -129,6 +131,11 @@
 
 ;; (transient-append-suffix 'magit-diff '(-1 -1 -1)
 ;;   '("l" "Toggle magit-delta" aankh/toggle-magit-delta))
+
+(defconst +aankh/difftastic-colour-remapping+
+  `(("red2" . "#a8353e") ;; https://oklch.com/#50,0.15,20,100
+    ("green2" . "#107823")
+    ("yellow2" . "#2f3b97")))
 
 (defun aankh/recolor-difftastic ()
   (let ((ovs (overlays-in (point-min) (point-max))))
@@ -148,23 +155,14 @@
 (defun aankh/get-remapped-difftastic-colour (original)
   (alist-get original +aankh/difftastic-colour-remapping+ nil nil 'string=))
 
-(defconst +aankh/difftastic-colour-remapping+
-  `(("red2" . "#a8353e") ;; https://oklch.com/#50,0.15,20,100
-    ("green2" . "#107823")
-    ("yellow2" . "#2f3b97")))
 
 ;; For some reason, this was being called twice without the guard.
-(with-eval-after-load 'magit
-
 (unless (boundp 'aankh/added-magit-diff-suffixes)
   (transient-append-suffix 'magit-diff '(-1 -1)
     [("l" "Toggle magit-delta" aankh/toggle-magit-delta)
      ("D" "Difftastic Diff (dwim)" th/magit-diff-with-difftastic)
      ("S" "Difftastic Show" th/magit-show-with-difftastic)]))
-(setf aankh/added-magit-diff-suffixes t)
-)
-
-
+(defvar aankh/added-magit-diff-suffixes t)
 
 
 (provide 'magit-difft)
