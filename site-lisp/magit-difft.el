@@ -10,6 +10,12 @@
 ;;   - https://www.reddit.com/r/emacs/comments/tr42hl/how_to_configure_magit_with_difftastic/
 ;;   - https://github.com/Bitnut/diffgit
 ;;
+;; Limitations:
+;;   - Converts difftastic ANSI color codes to Emacs overlays
+;;   - Difftastic syntax highlighting might yield some undesired ANSI output (e.g. bold line numbers)
+;;   - Could not figure out a way of transforming these bold line numbers to faint overlays without affecting the rest
+;;     (e.g. what if there is a magic number that has changed that is not a line number?)
+;;
 ;;; Code:
 
 (require 'ansi-color)
@@ -41,10 +47,13 @@
                    (with-current-buffer (process-buffer proc)
                      (goto-char (point-min))
                      (ansi-color-apply-on-region (point-min) (point-max))
-                     (aankh/recolor-difftastic) ; DANGER: Only change wrt original th/* function
                      (setq buffer-read-only t)
-                     (view-mode)
                      (end-of-line)
+                     ;; DANGER: Modifications wrt original snippet
+                     ;; (view-mode)
+                     (aankh/recolor-difftastic)
+                     (magit-difft-mode)
+                     ;; End of DANGER
                      ;; difftastic diffs are usually 2-column side-by-side,
                      ;; so ensure our window is wide enough.
                      (let ((width (current-column)))
@@ -151,15 +160,28 @@
 ;; End of INFO
 
 (defconst +aankh/difftastic-colour-remapping+
-  `(("red2" . "#a8353e") ;; https://oklch.com/#50,0.15,20,100
-    ("green2" . "#107823")
-    ("yellow2" . "#2f3b97")))
+  `(;; Original values
+    ;; ("red2" . "#a8353e") ;; https://oklch.com/#50,0.15,20,100
+    ;; ("green2" . "#107823")
+    ;; ("yellow2" . "#2f3b97")
+    ;;
+    ;; My override
+    ("red2" . "#a8353e")     ; Removed
+    ("green2" . "#107823")   ; Added
+    ("blue1" . ,(face-attribute font-lock-comment-face :foreground))  ; Comments
+    ("magenta2" . ,(face-attribute font-lock-string-face :foreground))  ; Strings
+    ))
 
 (defun aankh/recolor-difftastic ()
   (let ((ovs (overlays-in (point-min) (point-max))))
     (dolist (ov ovs)
       (let ((face (overlay-get ov 'face)))
-        (when (and (not (null face)) (listp face))
+        ;; DANGER: Keep strong bold highlighting in changed chunks
+        ;; (when (and (not (null face)) (listp face))
+        (when (and (not (null face))
+                   (listp face)
+                   (not (equal 'ansi-color-bold (car face))))
+          ;; End of DANGER
           (when (plist-get face :foreground)
             (plist-put face :foreground (aankh/get-remapped-difftastic-colour (plist-get face :foreground))))
           (when-let ((existing (cl-find :foreground face :key (lambda (x) (if (consp x) (car x) nil)))))
@@ -181,6 +203,25 @@
      ("D" "Difftastic Diff (dwim)" th/magit-diff-with-difftastic)
      ("S" "Difftastic Show" th/magit-show-with-difftastic)]))
 (defvar aankh/added-magit-diff-suffixes t)
+
+
+;;;; Own customization
+(defconst magit-difft-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "n") #'forward-paragraph)
+    (define-key map (kbd "N") #'forward-paragraph)
+    (define-key map (kbd "p") #'backward-paragraph)
+    (define-key map (kbd "P") #'backward-paragraph)
+    (define-key map (kbd "q") #'quit-window)
+    (define-key map (kbd "Q") #'quit-window)
+    map)
+  "Keymap for magit-difft-mode.")
+
+(define-minor-mode magit-difft-mode
+  "A mode to display Magit diffs with difftastic."
+  :lighter "difft"
+  :global nil
+  (message "Magit difftastic mode"))
 
 
 (provide 'magit-difft)
