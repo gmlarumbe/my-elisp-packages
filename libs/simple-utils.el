@@ -148,12 +148,13 @@ Principles:
                 (when (string= (buffer-name buf) search-buf)
                   (throw 'found buf)))))
           ;; Otherwise look for next-error capable buffers in current window (e.g. *compilation*)
-          ;; that are not flycheck/vterm buffers
+          ;; that are not flycheck/vterm/org buffers
           (dolist (buf frame-windows-buffer-list)
             (with-current-buffer buf
               (when (and (next-error-buffer-p buf nil extra-test-inclusive extra-test-exclusive) ; INFO: Do not ignore current buffer!
                          (not (eq next-error-function 'flycheck-next-error-function))
-                         (not (eq next-error-function 'vterm-next-error-function)))
+                         (not (eq next-error-function 'vterm-next-error-function))
+                         (not (eq next-error-function 'org-occur-next-match)))
                 (throw 'found buf))))
           ;; Finally check ONLY current flycheck/vterm buffer
           (when (or (eq next-error-function 'flycheck-next-error-function)
