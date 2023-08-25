@@ -18,13 +18,13 @@
 ;;  - Plus, this function calls `barf-if-buffer-read-only' so the (interactive "*") check
 ;;  in C seems redundant.
 ;;
-;; - Copied from <emacs-dir>/share/emacs/30.0.50/lisp/simple.el.gz
+;; - Copied from <emacs-dir>/share/emacs/29.1/lisp/simple.el.gz
 ;; - Tried creating a `larumbe/newline' function and adding both
 ;; :override and :before-until advices to newline but did not seem to work,
 ;; (might be due to order of advice dependency).
 
 (defun newline (&optional arg interactive)
-  "Insert a newline, and move to left margin of the new line.
+   "Insert a newline, and move to left margin of the new line.
 With prefix argument ARG, insert that many newlines.
 
 If `electric-indent-mode' is enabled, this indents the final new line
@@ -49,7 +49,7 @@ A non-nil INTERACTIVE argument means to run the `post-self-insert-hook'."
          (beforepos (point))
          (last-command-event ?\n)
          ;; Don't auto-fill if we have a prefix argument.
-         (inhibit-auto-fill (or inhibit-auto-fill arg))
+         (auto-fill-function (if arg nil auto-fill-function))
          (arg (prefix-numeric-value arg))
          (procsym (make-symbol "newline-postproc")) ;(bug#46326)
          (postproc
