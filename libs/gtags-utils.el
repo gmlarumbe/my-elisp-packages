@@ -55,7 +55,7 @@ If APPEND is set, append directory files to already existing tags file."
 
 (defun larumbe/gtags-create-tags-async-sentinel (process signal)
   "Sentinel for asynchronous gtags creation."
-  (let* ((buf (process-buffer process)))
+  (let ((buf (process-buffer process)))
     (cond
      ((equal signal "finished\n")
       (pop-to-buffer buf)
@@ -68,7 +68,7 @@ If APPEND is set, append directory files to already existing tags file."
 (defun larumbe/gtags-create-tags-async-kill-buf-sentinel (process signal)
   "Sentinel for asynchronous gtags creation.
 Kills gtags buffer after finishing the process if created sucessfully."
-  (let* ((buf (process-buffer process)))
+  (let ((buf (process-buffer process)))
     (cond
      ((equal signal "finished\n")
       (message "GTAGS successfully generated: %s" buf)
