@@ -339,14 +339,19 @@ Requires `compilation-utils' loaded, since it relies on regexps from `larumbe/co
   (unless (string= major-mode "compilation-mode")
     (error "Could only be used in `compilation-mode'!"))
   (let* ((line-text (thing-at-point 'line :no-props))
-         (uvm-re (cadr (assoc 'uvm-error re-alist)))
-         (uvm-re-time (concat uvm-re " @ \\(?4:[0-9]+\\( ns\\)?\\)"))
-         timestamp)
-    (if (string-match uvm-re-time line-text)
-        (progn
-          (setq timestamp (match-string-no-properties 4 line-text))
-          (kill-new timestamp)
-          (message timestamp))
+         (uvm-re-alist `(,(cadr (assoc 'uvm-error   re-alist))
+                         ,(cadr (assoc 'uvm-info    re-alist))
+                         ,(cadr (assoc 'uvm-warning re-alist))
+                         ,(cadr (assoc 'uvm-fatal   re-alist))))
+         uvm-re-time timestamp)
+    (unless (catch 'found
+              (dolist (uvm-re uvm-re-alist)
+                (setq uvm-re-time (concat uvm-re " @ \\(?4:[0-9]+\\( ns\\)?\\)"))
+                (when (string-match uvm-re-time line-text)
+                  (setq timestamp (match-string-no-properties 4 line-text))
+                  (kill-new timestamp)
+                  (message timestamp)
+                  (throw 'found t))))
       (message "Not in a UVM report line!"))))
 
 ;;;###autoload

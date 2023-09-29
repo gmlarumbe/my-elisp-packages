@@ -172,7 +172,23 @@ A repo is considered forked if remote is not tracking origin."
     (dolist (repo-sandbox repo-sandbox-list)
       (async-shell-command (concat "cd " repo-sandbox " && update_repo")))))
 
+;;;###autoload
+(defun larumbe/magit-performance ()
+  "Toggle performance variables in `magit-status' buffer.
 
+INFO: Don't forget to disable `magit-delta' as well!
+INFO: Simplest way to get back the default value of these variables might be
+restarting Emacs.
+
+https://magit.vc/manual/magit/Performance.html"
+  (interactive)
+  (message "Setting performance variables for `magit-status'")
+  (setq magit-refresh-status-buffer nil)
+  (setq magit-diff-highlight-indentation nil)
+  (setq magit-diff-highlight-trailing nil)
+  (setq magit-diff-paint-whitespace nil)
+  (setq magit-diff-highlight-hunk-body nil)
+  (setq magit-diff-refine-hunk nil))
 
 
 (provide 'larumbe-vc-utils)
