@@ -123,13 +123,13 @@ With optional prefix, prompt for a specific backend to be used."
                (larumbe/xref--find-def def)
              ;; Context based jump if no thing-at-point:
              (cond (;; Inside a module instance
-                    (and (or (verilog-ext-point-inside-block 'module)
+                    (and (or (verilog-ext-point-inside-block 'module) ; TODO: `verilog-ext-point-inside-block' still not verilog-ts-mode oriented
                              (verilog-ext-point-inside-block 'interface))
                          (verilog-ext-instance-at-point))
-                    (setq def (match-string-no-properties 1))
+                    (setq def (car (verilog-ext-instance-at-point)))
                     (when (or (eq tag-xref-backend 'xref-lsp) ; eglot and lsp work with ...
                               (eq tag-xref-backend 'eglot))   ; ... symbol at point
-                      (verilog-ext-find-module-instance-bwd-2)
+                      (verilog-ext-find-module-instance-bwd-1)
                       (unless (string= (thing-at-point 'symbol) def)
                         (error "[xref-utils]: Error while looking for def with LSP!")))
                     (larumbe/xref--find-def def))
@@ -206,7 +206,7 @@ With optional prefix, prompt for a specific backend to be used."
                     (setq ref (match-string-no-properties 1))
                     (when (or (eq tag-xref-backend 'xref-lsp) ; eglot and lsp work with ...
                               (eq tag-xref-backend 'eglot))   ; ... symbol at point
-                      (verilog-ext-find-module-instance-bwd-2)
+                      (verilog-ext-find-module-instance-bwd-1)
                       (unless (string= (thing-at-point 'symbol) ref)
                         (error "[xref-utils]: Error while looking for def with LSP!")))
                     (larumbe/xref--find-ref ref))
