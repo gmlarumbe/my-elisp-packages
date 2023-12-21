@@ -343,6 +343,7 @@ kill *ag* or *xref* buffers."
          ;; INFO: At some point tried to add the "*Compile-Log*" buffer, but very
          ;; rare bugs appeared when byte/native compiling, removing code from
          ;; current buffer...
+         ;; INFO: Also tried with *Warnings* but there were initialization errors
          buf-win)
     ;; Look for buffers sequentialy and break loop when one is found
     (catch 'found
