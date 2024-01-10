@@ -1,182 +1,59 @@
 ;;; compilation-utils.el --- Compilation Utils  -*- lexical-binding: t -*-
 ;;; Commentary:
 ;;
-;; The variable `larumbe/compilation-custom-regexp-sets' holds parser names
-;; and their corresponding regexp-alist-alists.
+;; The preferred way of having error regexps is via `define-compilation-mode'
+;; and recompiling with advice and setting `compilation-buffer-name-function'.
 ;;
-;; In order to extend it, just create the proper `larumbe/compilation-error-re-<program>'
-;; and add its parser at `larumbe/compilation-custom-regexp-sets'.
+;; ------------------------------------------------------------------------------
 ;;
-;; The function `larumbe/compilation-error-re-set' does all the logic.
+;; Legacy way is by setting manually `compilation-error-regexp-alist':
 ;;
-;; Plus, there are some functions to do interactive compilation with regexp
-;; parsing.
+;;   The variable `larumbe/compilation-custom-regexp-sets' holds parser names
+;;   and their corresponding regexp-alist-alists.
+;;
+;;   In order to extend it, just create the proper `larumbe/compilation-error-re-<program>'
+;;   and add its parser at `larumbe/compilation-custom-regexp-sets'.
+;;
+;;   The function `larumbe/compilation-error-re-set' does all the logic.
+;;
+;;   Plus, there are some functions to do interactive compilation with regexp
+;;   parsing.
 ;;
 ;;; Code:
 
 
 (require 'compile)
 
+;;;; Functions
+;;;###autoload
+(defun larumbe/compilation-buffer-name-function (name-of-mode)
+  "Custom function to set buffer name for compilation buffers.
+- If in a compilation buffer (recompiling), keep buffer name
+- Otherwise, if in a Git repo, set repo name
+- Otherwise fallback to default buffer name function."
+  (let ((repo-name (file-name-nondirectory (directory-file-name (file-name-directory (vc-root-dir))))))
+    (cond ((derived-mode-p 'compilation-mode)
+           (buffer-name))
+          (repo-name
+           (concat "*" repo-name "*"))
+          (t
+           (compilation--default-buffer-name name-of-mode)))))
 
-;;;; Additional faces
-(defvar larumbe/compilation-gray-face 'larumbe/compilation-gray-face)
-(defface larumbe/compilation-gray-face
-  '((t (:foreground "gray55")))
-  "Gray extra face for compilation regexp parsing"
-  :group 'compilation-extra-faces)
-
-(defvar larumbe/compilation-binary-face 'larumbe/compilation-binary-face)
-(defface larumbe/compilation-binary-face
-  '((t (:foreground "goldenrod")))
-  "Binary extra face for instances compilation regexp parsing"
-  :group 'compilation-extra-faces)
-
-
-
-;;;; Variables
-(defconst larumbe/compilation-error-re-vivado
-  '((vivado-error     "^\\(?1:^ERROR:\\) \\(?2:\\[[ a-zA-Z0-9\./_-]+\\]\\)\\(?3:.*\\[\\(?4:.*\\):\\(?5:[0-9]+\\)\\]\\)"            4 5   nil 2 nil (1 compilation-error-face)   (2 larumbe/compilation-gray-face))
-    (vivado-error2    "^\\(?1:^ERROR:\\) \\(?2:\\[[ a-zA-Z0-9\./_-]+\\]\\)"                                                        1 nil nil 2 nil (1 compilation-error-face)   (2 larumbe/compilation-gray-face))
-    (vivado-critical  "^\\(?1:^CRITICAL WARNING:\\) \\(?2:\\[[ a-zA-Z0-9\./_-]+\\]\\)\\(?3:.*\\[\\(?4:.*\\):\\(?5:[0-9]+\\)\\]\\)" 4 5   nil 1 nil (1 compilation-error-face)   (2 larumbe/compilation-gray-face))
-    (vivado-critical2 "^\\(?1:^CRITICAL WARNING:\\) \\(?2:\\[[ a-zA-Z0-9\./_-]+\\]\\)"                                             1 nil nil 1 nil (1 compilation-error-face)   (2 larumbe/compilation-gray-face))
-    (vivado-warning   "^\\(?1:^WARNING:\\) \\(?2:\\[[ a-zA-Z0-9\./_-]+\\]\\)\\(?3:.*\\[\\(?4:.*\\):\\(?5:[0-9]+\\)\\]\\)"          4 5   nil 1 nil (1 compilation-warning-face) (2 larumbe/compilation-gray-face))
-    (vivado-warning2  "^\\(?1:^WARNING:\\) \\(?2:\\[[ a-zA-Z0-9\./_-]+\\]\\)"                                                      1 nil nil 1 nil (1 compilation-warning-face) (2 larumbe/compilation-gray-face))
-    (vivado-info      "^\\(?1:^INFO:\\) \\(?2:\\[[ a-zA-Z0-9\./_-]+\\]\\)\\(?3:.*\\[\\(?4:.*\\):\\(?5:[0-9]+\\)\\]\\)"             4 5   nil 0 nil (1 compilation-info-face)    (2 larumbe/compilation-gray-face))
-    (vivado-info2     "^\\(?1:^INFO:\\) \\(?2:\\[[ a-zA-Z0-9\./_-]+\\]\\)"                                                         1 nil nil 0 nil (1 compilation-info-face)    (2 larumbe/compilation-gray-face))))
-
-;; Leveraged from verilog-mode (verilog-IES) and extended for UVM/OVM
-;;   - xrun-error: errors with line number and column number
-;;   - xrun-error2: errors with line number
-;;   - xrun-error3: errors without file/line
-(defconst larumbe/compilation-error-re-xrun
-  '((xrun-fatal    "\\(?1:^[a-z]+\\): \\(?2:\\*F\\),\\(?3:[0-9A-Z]+\\)\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?4:[^ \t,]+\\),\\(?5:[0-9]+\\)|\\(?6:[0-9]+\\)\\)" 4 5 6 2 nil (1 larumbe/compilation-binary-face) (2 compilation-error-face) (3 larumbe/compilation-gray-face))
-    (xrun-fatal2   "\\(?1:^[a-z]+\\): \\(?2:\\*F\\),\\(?3:[0-9A-Z]+\\)\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?4:[^ \t,]+\\),\\(?5:[0-9]+\\)\\)" 4 5 nil 2 nil (1 larumbe/compilation-binary-face) (2 compilation-error-face) (3 larumbe/compilation-gray-face))
-    (xrun-fatal3   "\\(?1:^[a-z]+\\): \\(?2:\\*F\\),\\(?3:[0-9A-Z]+\\):" 1 nil nil 2 nil (1 larumbe/compilation-binary-face) (2 compilation-error-face) (3 larumbe/compilation-gray-face))
-    (xrun-error    "\\(?1:^[a-z]+\\): \\(?2:\\*E\\),\\(?3:[0-9A-Z]+\\)\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?4:[^ \t,]+\\),\\(?5:[0-9]+\\)|\\(?6:[0-9]+\\)\\)" 4 5 6 2 nil (1 larumbe/compilation-binary-face) (2 compilation-error-face) (3 larumbe/compilation-gray-face))
-    (xrun-error2   "\\(?1:^[a-z]+\\): \\(?2:\\*E\\),\\(?3:[0-9A-Z]+\\)\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?4:[^ \t,]+\\),\\(?5:[0-9]+\\)\\)" 4 5 nil 2 nil (1 larumbe/compilation-binary-face) (2 compilation-error-face) (3 larumbe/compilation-gray-face))
-    (xrun-error3   "\\(?1:^[a-z]+\\): \\(?2:\\*E\\),\\(?3:[0-9A-Z]+\\):" 1 nil nil 2 nil (1 larumbe/compilation-binary-face) (2 compilation-error-face) (3 larumbe/compilation-gray-face))
-    (xrun-warning  "\\(?1:^[a-z]+\\): \\(?2:\\*W\\),\\(?3:[0-9A-Z]+\\)\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?4:[^ \t,]+\\),\\(?5:[0-9]+\\)|\\(?6:[0-9]+\\)\\)" 4 5 6 1 nil (1 larumbe/compilation-binary-face) (2 compilation-warning-face) (3 larumbe/compilation-gray-face))
-    (xrun-warning2 "\\(?1:^[a-z]+\\): \\(?2:\\*W\\),\\(?3:[0-9A-Z]+\\)\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?4:[^ \t,]+\\),\\(?5:[0-9]+\\)\\)" 4 5 nil 1 nil (1 larumbe/compilation-binary-face) (2 compilation-warning-face) (3 larumbe/compilation-gray-face))
-    (xrun-warning3 "\\(?1:^[a-z]+\\): \\(?2:\\*W\\),\\(?3:[0-9A-Z]+\\):" 1 nil nil 1 nil (1 larumbe/compilation-binary-face) (2 compilation-warning-face) (3 larumbe/compilation-gray-face))
-    (xrun-note     "\\(?1:^[a-z]+\\): \\(?2:\\*N\\),\\(?3:[0-9A-Z]+\\)\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?4:[^ \t,]+\\),\\(?5:[0-9]+\\)|\\(?6:[0-9]+\\)\\)" 4 5 6 0 nil (1 larumbe/compilation-binary-face) (2 compilation-info-face) (3 larumbe/compilation-gray-face))
-    (xrun-note2    "\\(?1:^[a-z]+\\): \\(?2:\\*N\\),\\(?3:[0-9A-Z]+\\)\\(?:\\(?:\\[[0-9A-Z_,]+\\]\\)? (\\(?4:[^ \t,]+\\),\\(?5:[0-9]+\\)\\)" 4 5 nil 0 nil (1 larumbe/compilation-binary-face) (2 compilation-info-face) (3 larumbe/compilation-gray-face))
-    (xrun-note3    "\\(?1:^[a-z]+\\): \\(?2:\\*N\\),\\(?3:[0-9A-Z]+\\):" 1 nil nil 0 nil (1 larumbe/compilation-binary-face) (2 compilation-info-face) (3 larumbe/compilation-gray-face))))
-
-(defconst larumbe/compilation-error-re-uvm
-  '((uvm-fatal    "^\\(?1:UVM_FATAL\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"   2 3 nil 2 nil (1 compilation-error-face))
-    (uvm-fatal2   "^\\(?1:UVM_FATAL\\) @"   1 nil nil 2 nil)
-    (uvm-error    "^\\(?1:UVM_ERROR\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"   2 3 nil 2 nil (1 compilation-error-face))
-    (uvm-error2   "^\\(?1:UVM_ERROR\\) @"   1 nil nil 2 nil)
-    (uvm-warning  "^\\(?1:UVM_WARNING\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))" 2 3 nil 1 nil (1 compilation-warning-face))
-    (uvm-warning2 "^\\(?1:UVM_WARNING\\) @" 1 nil nil 1 nil)
-    (uvm-info     "^\\(?1:UVM_INFO\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"    2 3 nil 0 nil (1 compilation-info-face))
-    (uvm-info2    "^\\(?1:UVM_INFO\\) @"    1 nil nil 0 nil)))
-
-(defconst larumbe/compilation-error-re-uvm-modelsim
-  '((uvm-fatal    "^# \\(?1:UVM_FATAL\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"   2 3 nil 2 nil (1 compilation-error-face))
-    (uvm-fatal2   "^# \\(?1:UVM_FATAL\\) @"   1 nil nil 2 nil)
-    (uvm-error    "^# \\(?1:UVM_ERROR\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"   2 3 nil 2 nil (1 compilation-error-face))
-    (uvm-error2   "^# \\(?1:UVM_ERROR\\) @"   1 nil nil 2 nil)
-    (uvm-warning  "^# \\(?1:UVM_WARNING\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))" 2 3 nil 1 nil (1 compilation-warning-face))
-    (uvm-warning2 "^# \\(?1:UVM_WARNING\\) @" 1 nil nil 1 nil)
-    (uvm-info     "^# \\(?1:UVM_INFO\\) \\(?2:[a-zA-Z0-9\./_-]+\\)(\\(?3:[0-9]+\\))"    2 3 nil 0 nil (1 compilation-info-face))
-    (uvm-info2    "^# \\(?1:UVM_INFO\\) @"    1 nil nil 0 nil)))
-
-(defconst larumbe/compilation-error-re-ovm
-  '((ovm-fatal    "^\\(?1:OVM_FATAL\\) @ \\(?2:[0-9]+\\): "   1 nil nil 2 nil (2 compilation-line-face))
-    (ovm-error    "^\\(?1:OVM_ERROR\\) @ \\(?2:[0-9]+\\): "   1 nil nil 2 nil (2 compilation-line-face))
-    (ovm-warning  "^\\(?1:OVM_WARNING\\) @ \\(?2:[0-9]+\\): " 1 nil nil 1 nil (2 compilation-line-face))
-    (ovm-info     "^\\(?1:OVM_INFO\\) @ \\(?2:[0-9]+\\): "    1 nil nil 0 nil (2 compilation-line-face))))
-
-(defconst larumbe/compilation-error-re-modelsim
-  '(;; vlog
-    (vlog-error   "^\\*\\* \\(?1:Error\\)\\( (suppressible)\\)?: \\(?2:[a-zA-Z0-9./_-]+\\)(\\(?3:[0-9]+\\)): \\(?4:([a-zA-Z0-9_-]+) \\)?" 2 3 nil 2 nil (1 compilation-error-face))
-    (vlog-error2  "^\\*\\* \\(?1:Error\\)\\( (suppressible)\\)?: \\(?2:([a-zA-Z0-9_-]+) \\)?\\(?3:[a-zA-Z0-9./_-]+\\)(\\(?4:[0-9]+\\)): " 3 4 nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
-    (vlog-error3  "^\\*\\* \\(?1:Error\\)\\( (suppressible)\\)?: \\(?2:\\(([a-zA-Z0-9_-]+) \\)?\\*\\* while parsing file included at \\(?3:[a-zA-Z0-9./_-]+\\)\\)(\\(?4:[0-9]+\\))\n\\*\\* \\(?5:at\\) \\(?6:[a-zA-Z0-9./_-]+\\)(\\(?7:[0-9]+\\)): " 6 7 nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face) (3 compilation-error-face) (4 compilation-line-face) (5 larumbe/compilation-gray-face))
-    (vlog-error4  "^\\*\\* \\(?1:Error\\)\\( (suppressible)\\)?: \\(?2:([a-zA-Z0-9_-]+) \\)?" nil nil nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
-    (vlog-error5  "^\\*\\* \\(?1:Error\\): \\(?2:([a-zA-Z0-9_-]+) \\)?" nil nil nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
-    (vlog-error6  "^\\*\\* \\(?1:Error\\): " nil nil nil 2 nil (1 compilation-error-face))
-    (vlog-warning "^\\*\\* \\(?1:Warning\\)\\( (suppressible)\\)?: \\(?2:[a-zA-Z0-9./_-]+\\)(\\(?3:[0-9]+\\)): \\(?4:([a-zA-Z0-9_-]+) \\)?" 2 3 nil 1 nil (1 compilation-warning-face))
-    (vlog-warning2 "^\\*\\* \\(?1:Warning\\): \\(?2:([a-zA-Z0-9_-]+) \\)?" nil nil nil 1 nil (1 compilation-warning-face) (2 larumbe/compilation-gray-face))
-    (vlog-warning3 "^\\*\\* \\(?1:Warning\\): " nil nil nil 1 nil (1 compilation-warning-face))
-    (vlog-note "^\\*\\* \\(?1:Note\\): \\(?2:[a-zA-Z0-9./_-]+\\)(\\([0-9]+\\)): " 2 3 nil 0 nil (1 compilation-info-face))
-    (vlog-note2 "^\\*\\* \\(?1:Note\\): " nil nil nil 0 nil (1 compilation-info-face))
-    ;; vsim
-    (vsim-fatal   "^# \\*\\* \\(?1:Fatal\\): \\(?2:([a-zA-Z0-9./_-]+)\\) .*\n#[ ]+\\(?3:Time: [0-9]+ [a-z]s  Iteration: [0-9]+  Instance: [/a-zA-Z0-9_-]+ \\)File: \\(?4:[a-zA-Z0-9./_-]+\\) Line: \\(?5:[0-9]+\\)" 4 5 nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face) (3 larumbe/compilation-gray-face))
-    (vsim-fatal2  "^# \\*\\* \\(?1:Fatal\\): \\(?2:([a-zA-Z0-9./_-]+)\\) \\(?3:[a-zA-Z0-9./_-]+\\)(\\(?4:[0-9]+\\)): " 3 4 nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
-    (vsim-fatal3  "^# \\*\\* \\(?1:Fatal\\): \\(?2:[a-zA-Z0-9./_-]+\\)(\\(?3:[0-9]+\\)): " 2 3 nil 2 nil (1 compilation-error-face))
-    (vsim-fatal4  "^# \\*\\* \\(?1:Fatal\\): \\(?2:([a-zA-Z0-9./_-]+)\\) " nil nil nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
-    (vsim-fatal5  "^# \\*\\* \\(?1:Fatal\\): " nil nil nil 2 nil (1 compilation-error-face))
-    (vsim-error   "^# \\*\\* \\(?1:Error\\): \\(?2:([a-zA-Z0-9./_-]+)\\) .*\n#[ ]+\\(?3:Time: [0-9]+ [a-z]s  Iteration: [0-9]+  Instance: [/a-zA-Z0-9_-]+ \\)File: \\(?4:[a-zA-Z0-9./_-]+\\) Line: \\(?5:[0-9]+\\)" 4 5 nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face) (3 larumbe/compilation-gray-face))
-    (vsim-error2  "^# \\*\\* \\(?1:Error\\( (suppressible)\\)?\\): \\(?2:([a-zA-Z0-9./_-]+)\\) \\(?3:[a-zA-Z0-9./_-]+\\)(\\(?4:[0-9]+\\)): " 3 4 nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
-    (vsim-error3  "^# \\*\\* \\(?1:Error\\( (suppressible)\\)?\\): \\(?2:([a-zA-Z0-9./_-]+)\\)" nil nil nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
-    (vsim-error4  "^# \\*\\* \\(?1:Error\\): \\(?2:([a-zA-Z0-9_-]+) \\)" nil nil nil 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
-    (vsim-error5  "^# \\*\\* \\(?1:Error\\): " nil nil nil 2 nil (1 compilation-error-face))
-    (vsim-warning "^# \\*\\* \\(?1:Warning\\): \\(?2:([a-zA-Z0-9./_-]+) \[[A-Z]+\]\\) .*\n#[ ]+\\(?3:Time: [0-9]+ [a-z]s  Iteration: [0-9]+  Instance: [/a-zA-Z0-9_-]+ \\)File: \\(?4:[a-zA-Z0-9./_-]+\\) Line: \\(?5:[0-9]+\\)" 4 5 nil 1 nil (1 compilation-warning-face) (2 larumbe/compilation-gray-face) (3 larumbe/compilation-gray-face))
-    (vsim-warning2 "^# \\*\\* \\(?1:Warning\\): \\(?2:([a-zA-Z0-9./_-]+)\\) .*\n#[ ]+\\(?3:Time: [0-9]+ [a-z]s  Iteration: [0-9]+  Region: [/a-zA-Z0-9_-]+ \\)File: \\(?4:[a-zA-Z0-9./_-]+\\)" 4 nil nil 1 nil (1 compilation-warning-face) (2 larumbe/compilation-gray-face) (3 larumbe/compilation-gray-face))
-    (vsim-warning3 "^# \\*\\* \\(?1:Warning\\): \\(?2:([a-zA-Z0-9_-]+) \\)" nil nil nil 1 nil (1 compilation-warning-face) (2 larumbe/compilation-gray-face))
-    (vsim-warning4 "^# \\*\\* \\(?1:Warning\\): " nil nil nil 1 nil (1 compilation-warning-face))
-    (vsim-note "^# \\*\\* \\(?1:Note\\): \\(?2:([a-zA-Z0-9./_-]+)\\) " nil nil nil 0 nil (1 compilation-info-face) (2 larumbe/compilation-gray-face))
-    (vsim-note2 "^# \\*\\* \\(?1:Note\\): " nil nil nil 0 nil (1 compilation-info-face))
-    ;; VHDL severity
-    (vsim-vhdl-failure "^# \\*\\* \\(?1:Failure\\): " nil nil nil 2 nil (1 compilation-error-face))
-    (vsim-vhdl-error   "^# \\*\\* \\(?1:Error\\): "   nil nil nil 2 nil (1 compilation-error-face))
-    (vsim-vhdl-warning "^# \\*\\* \\(?1:Warning\\): " nil nil nil 1 nil (1 compilation-warning-face))
-    (vsim-vhdl-note    "^# \\*\\* \\(?1:Note\\): "    nil nil nil 0 nil (1 compilation-info-face))
-    ))
-
-;; Fetched from verilog-mode variable: `verilog-error-regexp-emacs-alist'.
-(defconst larumbe/compilation-error-re-verilator
-  '((verilator-error   "%?\\(Error\\)\\(-[^:]+\\|\\):[\n ]*\\([^ \t:]+\\):\\([0-9]+\\):"    3 4 nil 2 nil (1 compilation-error-face)   (2 compilation-line-face))
-    (verilator-warning "%?\\(Warning\\)\\(-[^:]+\\|\\):[\n ]*\\([^ \t:]+\\):\\([0-9]+\\):"  3 4 nil 1 nil (1 compilation-warning-face) (2 compilation-line-face))))
-
-(defconst larumbe/compilation-error-re-iverilog
-  '((iverilog-unsupported  "\\(?1:.*\\):\\(?2:[0-9]+\\):.*sorry:"            1 2 nil   0 nil (1 compilation-info-face) (2 compilation-line-face))
-    (iverilog-warning      "\\(?1:.*\\):\\(?2:[0-9]+\\):.*warning:"          1 2 nil   1 nil (1 compilation-warning-face) (2 compilation-line-face))
-    (iverilog-warning2     "^\\(?1:warning\\):"                              1 nil nil 1 nil)
-    (iverilog-error        "\\(?1:.*\\):\\(?2:[0-9]+\\):.*error:"            1 2 nil   2 nil (1 compilation-error-face)   (2 compilation-line-face))
-    (vvp-warning           "^\\(?1:WARNING\\): \\(?2:.*\\):\\(?3:[0-9]+\\):" 2 3 nil   1 nil (1 compilation-warning-face) (2 compilation-warning-face) (3 compilation-line-face))
-    (vvp-error             "^\\(?1:ERROR\\): \\(?2:.*\\):\\(?3:[0-9]+\\):"   2 3 nil   2 nil (1 compilation-warning-face) (2 compilation-warning-face) (3 compilation-line-face))
-    (vvp-info              "^\\(?1:LXT2 info\\):"                            1 nil nil 0 nil)))
-
-(defconst larumbe/compilation-error-re-ghdl
-  `((ghdl-info    ,(concat "\\(?1:[a-zA-Z0-9-_\\.\\/]+\\):\\(?2:[0-9]+\\):\\(?3:[0-9]+\\):note: ")    1 2 3 0 nil)
-    (ghdl-warning ,(concat "\\(?1:[a-zA-Z0-9-_\\.\\/]+\\):\\(?2:[0-9]+\\):\\(?3:[0-9]+\\):warning: ") 1 2 3 1 nil)
-    (ghdl-error   ,(concat "\\(?1:[a-zA-Z0-9-_\\.\\/]+\\):\\(?2:[0-9]+\\):\\(?3:[0-9]+\\): ")         1 2 3 2 nil)))
-
-(defconst larumbe/compilation-error-re-synplify
-  '((synp-error     "^@\\(?1:E\\): \\(?2:[A-Z0-9]+\\) :\"\\(?3:[0-9a-zA-Z./_-]+\\)\":\\(?4:[0-9]+\\):\\(?5:[0-9]+\\):" 3 4 5 2 nil (1 compilation-error-face) (2 larumbe/compilation-gray-face))
-    (synp-error2    "^@\\(?1:E\\): \\(?2:[A-Z0-9]+\\) [:]?|" 1 nil nil 2 nil (2 larumbe/compilation-gray-face))
-    (synp-error3    "^@\\(?1:E\\):" 1 nil nil 2 nil)
-    (synp-warning   "^@\\(?1:W\\): \\(?2:[A-Z0-9]+\\) :\"\\(?3:[0-9a-zA-Z./_-]+\\)\":\\(?4:[0-9]+\\):\\(?5:[0-9]+\\):" 3 4 5 1 nil (1 compilation-warning-face) (2 larumbe/compilation-gray-face))
-    (synp-warning2  "^@\\(?1:W\\): \\(?2:[A-Z0-9]+\\) [:]?|" 1 nil nil 1 nil (2 larumbe/compilation-gray-face))
-    (synp-warning3  "^@\\(?1:W\\):" 1 nil nil 1 nil)
-    (synp-note      "^@\\(?1:N\\): \\(?2:[A-Z0-9]+\\) :\"\\(?3:[0-9a-zA-Z./_-]+\\)\":\\(?4:[0-9]+\\):\\(?5:[0-9]+\\):" 3 4 5 0 nil (1 compilation-info-face) (2 larumbe/compilation-gray-face))
-    (synp-note2     "^@\\(?1:N\\): \\(?2:[A-Z0-9]+\\) [:]?|" 1 nil nil 0 nil (2 larumbe/compilation-gray-face))
-    ;; Did not find what those meant online, so set as warnings
-    (synp-alt-info  "^@\\(?1:A\\): \\(?2:[A-Z0-9]+\\) :\"\\(?3:[0-9a-zA-Z./_-]+\\)\":\\(?4:[0-9]+\\):\\(?5:[0-9]+\\):" 3 4 5 0 nil (1 compilation-info-face) (2 larumbe/compilation-gray-face))
-    (synp-alt-info2 "^@\\(?1:A\\): \\(?2:[A-Z0-9]+\\) [:]?|" 1 nil nil 0 nil (2 larumbe/compilation-gray-face))
-    (synp-alt-info3 "^@\\(?1:A\\):" 1 nil nil 0 nil)
-    (synp-note3     "^@\\(?1:N\\):" 1 nil nil 0 nil)
-    (synp-info      "^@\\(?1:I\\):" nil nil nil 0 nil (1 compilation-line-face))
-    (synp-log       "^@\\(?1:L\\):" nil nil nil 0 nil (1 compilation-line-face))))
-
-(defconst larumbe/compilation-error-re-synopsys-dc
-  '((dc-error     "\\(?1:^Error\\):  \\(?2:[0-9a-zA-Z./_-]+\\):\\(?3:[0-9]+\\): "       2 3   nil 2 nil (1 compilation-error-face))
-    (dc-error-2   "\\(?1:^Error\\): .*"                                                 1 nil nil 2 nil)
-    (dc-warning   "\\(?1:^Warning\\):  \\(?2:[0-9a-zA-Z./_-]+\\):\\(?3:[0-9]+\\): "     2 3   nil 1 nil (1 compilation-warning-face))
-    (dc-warning-2 "\\(?1:^Warning\\): .*"                                               1 nil nil 1 nil)
-    (dc-info      "\\(?1:^Information\\):  \\(?2:[0-9a-zA-Z./_-]+\\):\\(?3:[0-9]+\\): " 2 3   nil 0 nil (1 compilation-info-face))
-    (dc-info-2    "\\(?1:^Information\\): .*"                                           1 nil nil 0 nil)))
-
-(defconst larumbe/compilation-error-re-lattice
-  '((lattice-error     "\\(?1:^ERROR\\) -"                                                                    1 nil nil 2 nil (1 compilation-error-face))
-    (lattice-warning   "\\(?1:^WARNING\\) - \\(?2:[a-z0-9]+:\\) \\(?3:[a-zA-Z0-9\./_-]+\\)(\\(?4:[0-9]+\\)):" 3 4   nil 1 nil (1 compilation-warning-face) (2 larumbe/compilation-binary-face))
-    (lattice-warning2  "\\(?1:^WARNING\\) - \\(?2:[a-z0-9]+:\\)"                                              1 nil nil 1 nil (1 compilation-warning-face) (2 larumbe/compilation-binary-face))
-    (lattice-warning3  "\\(?1:^WARNING\\) -"                                                                  1 nil nil 1 nil (1 compilation-warning-face))))
+;;;###autoload
+(defun larumbe/compilation-threshold ()
+  (interactive)
+  (let* ((choices '("error" "warning" "info"))
+         (choice   (completing-read "Threshold: " choices)))
+    (pcase choice
+      ("error"   (setq compilation-skip-threshold 2))
+      ("warning" (setq compilation-skip-threshold 1))
+      ("info"    (setq compilation-skip-threshold 0)))))
 
 
+;;;; Legacy
+;;;;; Misc regexps
 ;; Adapted from compilation.el for Python tracebacks
+;; - Probably better to use regexp from `inferior-python-mode'
 (defconst larumbe/compilation-error-re-python
   '((python-tracebacks-and-caml "File \\(\"?\\)\\([^,\" \n\t<>]+\\)\\1, lines? \\([0-9]+\\)-?\\([0-9]+\\)?\\(?:$\\|, \\(?: characters? \\([0-9]+\\)-?\\([0-9]+\\)?:\\)?\\([ \n]Warning\\(?: [0-9]+\\)?:\\)?\\)?" 2 (3 . 4) (5 . 6) (7)) ; Some regexps where not detected on some SCons errors (original one did not have `?' at the end)
     (python-log-error   "\\(?1:[0-9-]+ [0-9:,]+\\) - \\(?2:[a-zA-Z0-9.]+\\) - \\(?3:ERROR\\) - "   3 nil nil 2 2 (1 compilation-line-face) (3 compilation-error-face))
@@ -189,21 +66,9 @@
     (scons-target-cw     "\\(?1:critical warning\\)$"            1 nil nil 1 nil (1 compilation-warning-face))
     (scons-target-ok     "\\(?1:OK\\)$"                          1 nil nil 0 nil (1 compilation-info-face))))
 
-(defconst larumbe/compilation-error-re-pax
-  '((pax-assert-err  "** \\(?1:assertion failure\\) at time \\(?2:[0-9.]+\\)"   1 nil nil 2 nil (2 compilation-line-face))
-    (pax-tb-note     "\\(?1:^TB_NOTE\\) @ [0-9\.]+:"                            1 nil nil 0 nil)
-    (pax-tb-debug    "\\(?1:^TB_DEBUG\\) @ [0-9\.]+:"                           1 nil nil 0 nil (1 compilation-line-face))
-    (pax-tb-warning  "\\(?1:^TB_WARNING\\) @ [0-9\.]+:"                         1 nil nil 1 nil)
-    (pax-tb-err      "\\(?1:^TB_ERROR\\) @ [0-9\.]+:"                           1 nil nil 2 nil)
-    (pax-tb-fatal    "\\(?1:^TB_FATAL\\) @ [0-9\.]+:"                           1 nil nil 2 nil)
-    (pax-perl-err    "\\(?1:^ERROR\\):"                                         1 nil nil 2 nil)
-    (pax-perl-err2   "\\(?1:^ERROR\\)!"                                         1 nil nil 2 nil)
-    (pax-gasearch    "^\\(?1:[0-9]+\\) \\(?2:[a-zA-Z0-9\\_\\-\\.\\/]+\\)+ \"\\(?3:[a-zA-Z0-9\\_\\-\\.]+\\)+\" \\(?4:[0-9]+\\)" 2 nil nil 2 nil (1 compilation-info-face) (3 compilation-warning-face) (4 compilation-info-face))))
-
 (defconst larumbe/compilation-error-re-gcc
   '((gcc-warning "^\\(?1:[0-9a-zA-Z\/\._-]+\\):\\(?2:[0-9]+\\):\\(?3:[0-9]+\\): \\(?4:warning\\):" 1 2 3 1 nil)
     (gcc-error   "^\\(?1:[0-9a-zA-Z\/\._-]+\\):\\(?2:[0-9]+\\):\\(?3:[0-9]+\\): \\(?4:error\\):"   1 2 3 2 nil)))
-
 
 ;; INFO: To be used with: `C-u M-x compile RET tail -f Log.txt'
 ;; Or just make a wrapper function to set up this debug config
@@ -215,28 +80,14 @@
     (ableton-others     "\\(?1:[0-9-]+T[0-9:.]+:\\) \\(?2:info:\\)"                                nil nil nil 0 2 (1 compilation-line-face))))
 
 
-(defconst larumbe/compilation-custom-regexp-sets
-  '(("verilog-make" . (larumbe/compilation-error-re-iverilog larumbe/compilation-error-re-verilator larumbe/compilation-error-re-vivado))
-    ("vivado"       . (larumbe/compilation-error-re-vivado))
-    ("xrun"         . (larumbe/compilation-error-re-xrun larumbe/compilation-error-re-uvm larumbe/compilation-error-re-ovm))
-    ("modelsim"     . (larumbe/compilation-error-re-modelsim larumbe/compilation-error-re-uvm-modelsim))
-    ("verilator"    . (larumbe/compilation-error-re-verilator))
-    ("iverilog"     . (larumbe/compilation-error-re-iverilog))
-    ("ghdl"         . (larumbe/compilation-error-re-ghdl))
-    ("synplify"     . (larumbe/compilation-error-re-synplify))
-    ("synopsys-dc"  . (larumbe/compilation-error-re-synopsys-dc))
-    ("avid-ci"      . (larumbe/compilation-error-re-vivado larumbe/compilation-error-re-ghdl larumbe/compilation-error-re-modelsim larumbe/compilation-error-re-uvm-modelsim))
-    ("scons"        . (larumbe/compilation-error-re-xrun larumbe/compilation-error-re-vivado larumbe/compilation-error-re-synplify larumbe/compilation-error-re-lattice larumbe/compilation-error-re-scons larumbe/compilation-error-re-python))
-    ("pax"          . (larumbe/compilation-error-re-xrun larumbe/compilation-error-re-pax larumbe/compilation-error-re-gcc))
-    ("ableton"      . (larumbe/compilation-error-re-python larumbe/compilation-error-re-ableton))))
-
+;;;;; Variables
+(defvar larumbe/compilation-custom-regexp-sets nil) ; Set on specific machine
 (defvar larumbe/compilation-custom-regexp-active nil)
-
 (defvar larumbe/compilation-ask-for-confirmation t
-  "Prompt for confirmation on reusing a buffer when executing `larumbe/compile'")
+  "Prompt for confirmation on reusing a buffer when executing `larumbe/compile'.")
 
 
-;;;; Functions
+;;;;; Functions
 ;;;###autoload
 (defun larumbe/compilation-error-re-set (parser)
   "Set variables `compilation-error-regexp-alist' and `compilation-error-regexp-alist-alist' according to PARSER."
@@ -266,8 +117,9 @@ If BUF is in use, ask for confirmation to re-use it."
             (switch-to-buffer buf)
           (error "Aborting compilation!"))
       (switch-to-buffer buf)))
+  ;; INFO: Nasty hack make sure that there are no compilation buffers present when running this
+  (delete-other-windows)
   ;; Compile
-  ;; TODO: Do something to make sure that there are no compilation buffers present when running this
   (compile cmd)
   ;; If BUF does not exist, set up properties from default *compilation*
   (when (and buf
@@ -280,18 +132,6 @@ If BUF is in use, ask for confirmation to re-use it."
   (delete-other-windows)
   (setq truncate-lines t)
   (goto-char (point-max)))
-
-
-;;;###autoload
-(defun larumbe/compilation-threshold ()
-  (interactive)
-  (let* ((choices '("error" "warning" "info"))
-         (choice   (completing-read "Threshold: " choices)))
-    (pcase choice
-      ("error"   (setq compilation-skip-threshold 2))
-      ("warning" (setq compilation-skip-threshold 1))
-      ("info"    (setq compilation-skip-threshold 0)))))
-
 
 
 ;;;###autoload
@@ -308,7 +148,6 @@ every buffer would require confirmation."
   (message "Compilation Error Regexp set Globally to: %s" larumbe/compilation-custom-regexp-active))
 
 
-
 ;;;###autoload
 (defun larumbe/recompile-with-regexp-alist ()
   "Recompile current *compilation* buffer and set proper regexp-alist for different programs"
@@ -318,7 +157,6 @@ every buffer would require confirmation."
   (recompile)
   (larumbe/compilation-error-re-set larumbe/compilation-custom-regexp-active)
   (goto-char (point-max)))
-
 
 
 ;;;###autoload
@@ -338,39 +176,6 @@ If passed PARSER, set corresponding regexp to be evaluated at the header."
     (save-buffer)
     (read-only-mode 1)
     (revert-buffer nil t)))
-
-(defun larumbe/uvm-copy-timestamp (re-alist)
-  "Copy current UVM timestamp from line at point.
-Requires `compilation-utils' loaded, since it relies on regexps from `larumbe/compilation-error-re-xrun'."
-  (unless (string= major-mode "compilation-mode")
-    (error "Could only be used in `compilation-mode'!"))
-  (let* ((line-text (thing-at-point 'line :no-props))
-         (uvm-re-alist `(,(cadr (assoc 'uvm-error   re-alist))
-                         ,(cadr (assoc 'uvm-info    re-alist))
-                         ,(cadr (assoc 'uvm-warning re-alist))
-                         ,(cadr (assoc 'uvm-fatal   re-alist))))
-         uvm-re-time timestamp)
-    (unless (catch 'found
-              (dolist (uvm-re uvm-re-alist)
-                (setq uvm-re-time (concat uvm-re " @ \\(?4:[0-9]+\\( ns\\)?\\)"))
-                (when (string-match uvm-re-time line-text)
-                  (setq timestamp (match-string-no-properties 4 line-text))
-                  (kill-new timestamp)
-                  (message timestamp)
-                  (throw 'found t))))
-      (message "Not in a UVM report line!"))))
-
-;;;###autoload
-(defun larumbe/uvm-copy-timestamp-xrun ()
-  "Copy current UVM timestamp from line at point for Xcelium regexps."
-  (interactive)
-  (larumbe/uvm-copy-timestamp larumbe/compilation-error-re-xrun))
-
-;;;###autoload
-(defun larumbe/uvm-copy-timestamp-vsim ()
-  "Copy current UVM timestamp from line at point for Modelsim/Questa regexps."
-  (interactive)
-  (larumbe/uvm-copy-timestamp larumbe/compilation-error-re-uvm-modelsim))
 
 
 ;;;; Interactive comint library
@@ -427,15 +232,6 @@ Makes use of buffer-local variable `larumbe/compilation-interactive-buildcmd' to
       (setq proc (get-buffer-process (current-buffer)))
       (comint-send-string proc larumbe/compilation-interactive-buildcmd)
       (comint-send-string proc "\n"))))
-
-
-;;;; Compilation-derived modes
-(define-compilation-mode synplify-log-mode "Synplify Log"
-  "Synplify log compilation mode"
-  (setq-local compilation-skip-threshold 2) ; Default to check errors
-  (setq-local compilation-error-regexp-alist (mapcar 'car larumbe/compilation-error-re-synplify))
-  (setq-local compilation-error-regexp-alist-alist larumbe/compilation-error-re-synplify))
-
 
 ;;;; Misc
 ;; https://stackoverflow.com/questions/10946219/emacs-compilation-mode-wont-see-bash-alias
