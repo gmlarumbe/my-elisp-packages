@@ -31,7 +31,9 @@
 - If in a compilation buffer (recompiling), keep buffer name
 - Otherwise, if in a Git repo, set repo name
 - Otherwise fallback to default buffer name function."
-  (let ((repo-name (file-name-nondirectory (directory-file-name (file-name-directory (vc-root-dir))))))
+  (let* ((repo-dir (vc-root-dir))
+         (repo-name (when repo-dir
+                      (file-name-nondirectory (directory-file-name (file-name-directory repo-dir))))))
     (cond ((derived-mode-p 'compilation-mode)
            (buffer-name))
           (repo-name
