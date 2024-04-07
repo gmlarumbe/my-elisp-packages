@@ -116,37 +116,57 @@ With optional prefix, prompt for a specific backend to be used."
           ((and file (file-exists-p (larumbe/strip-file-line-number (substitute-in-file-name file))))
            (larumbe/find-file-dwim))
           ;; If not pointing to a file choose between different navigation functions
+          ;;   - LSP-bridge
+          ((bound-and-true-p lsp-bridge-mode)
+           (let ((pos (point))
+                 (pos-marker (point-marker))
+                 (attempt-xref-push-marker nil))
+             (lsp-bridge-find-def)
+             ;; INFO: Due to this multitreaded story it's not simple to execute the code after lsp-bridge-find-def as if
+             ;; it received a return status. Probably need to check the EPC or something like that
+             (when (and attempt-xref-push-marker
+                        (not (eq pos (point))))
+               (xref-push-marker-stack pos-marker))))
           ;;   - Verilog: try to jump to module at point if not over a tag
-          ((or (string= major-mode "verilog-mode")
-               (string= major-mode "verilog-ts-mode"))
+          ((or (eq major-mode 'verilog-mode)
+               (eq major-mode 'verilog-ts-mode))
            (if def
                (larumbe/xref--find-def def)
              ;; Context based jump if no thing-at-point:
-             (cond (;; Inside a module instance
-                    (and (or (verilog-ext-point-inside-block 'module) ; TODO: `verilog-ext-point-inside-block' still not verilog-ts-mode oriented
-                             (verilog-ext-point-inside-block 'interface))
-                         (verilog-ext-instance-at-point))
-                    (setq def (car (verilog-ext-instance-at-point)))
-                    (when (or (eq tag-xref-backend 'xref-lsp) ; eglot and lsp work with ...
-                              (eq tag-xref-backend 'eglot))   ; ... symbol at point
-                      (verilog-ext-find-module-instance-bwd-1)
-                      (unless (string= (thing-at-point 'symbol) def)
-                        (error "[xref-utils]: Error while looking for def with LSP!")))
-                    (larumbe/xref--find-def def))
-                   ;; Default fallback
-                   (t
-                    (call-interactively #'xref-find-definitions)))))
-          ((or (string= major-mode "vhdl-mode")
-               (string= major-mode "vhdl-ts-mode"))
+             (let (instance-data)
+               (cond (;; Inside a module instance
+                      (and (or (verilog-ext-point-inside-block 'module)
+                               (verilog-ext-point-inside-block 'interface))
+                           (setq instance-data (verilog-ext-instance-at-point)))
+                      (setq def (car (verilog-ext-instance-at-point)))
+                      (when (or (member 'lsp--xref-backend xref-backend-functions)         ; lsp and verilog-ext backends
+                                (member 'eglot-xref-backend xref-backend-functions)        ; work with symbol at point,
+                                (member 'lspce-xref-backend xref-backend-functions)        ; only return valid backend if
+                                (member 'verilog-ext-xref-backend xref-backend-functions)) ; point is over a def
+                        (verilog-ext-find-module-instance-bwd-1)
+                        (unless (string= (thing-at-point 'symbol) def)
+                          (error "[xref-utils]: Error while looking for def with LSP!")))
+                      (larumbe/xref--find-def def))
+                     ;; Default fallback
+                     (t
+                      (call-interactively #'xref-find-definitions))))))
+          ;;   - VHDL: try to jump to module at point if not over a tag
+          ((or (eq major-mode 'vhdl-mode)
+               (eq major-mode 'vhdl-ts-mode))
            (if def
                (larumbe/xref--find-def def)
              ;; Context based jump if no thing-at-point:
              (cond (;; Inside an entity instance
                     (setq def (car (vhdl-ext-instance-at-point)))
-                    (when (or (eq tag-xref-backend 'xref-lsp) ; eglot and lsp work with ...
-                              (eq tag-xref-backend 'eglot))   ; ... symbol at point
-                      (vhdl-ext-find-entity-instance-bwd)
-                      (goto-char (match-beginning 6))
+                    (when (or (member 'lsp--xref-backend xref-backend-functions)      ; lsp and vhdl-ext backends
+                              (member 'eglot-xref-backend xref-backend-functions)     ; work with symbol at point,
+                              (member 'lspce-xref-backend xref-backend-functions)     ; only return valid backend if
+                              (member 'vhdl-ext-xref-backend xref-backend-functions)) ; point is over a def
+                      (call-interactively #'vhdl-ext-find-entity-instance-bwd)
+                      ;; Workaround: vhdl-ts-mode backward navigation needs to
+                      ;; place point at the instance name, not the instance type
+                      (when (eq major-mode 'vhdl-ts-mode)
+                        (re-search-forward (concat "\\_<" def "\\_>") nil :noerror))
                       (unless (string= (thing-at-point 'symbol) def)
                         (error "[xref-utils]: Error while looking for def with LSP!")))
                     (larumbe/xref--find-def def))
@@ -194,39 +214,51 @@ With optional prefix, prompt for a specific backend to be used."
                    (user-error "[xref-utils]: Could not find references for `%s' with [%s]" ref (symbol-name forced-backend))
                  (xref-find-references ref)
                  (larumbe/xref-report-backend ref tag-xref-backend :ref)))))
+          ;; LSP-bridge
+          ((bound-and-true-p lsp-bridge-mode)
+           (lsp-bridge-find-references))
           ;; Verilog
-          ((or (string= major-mode "verilog-mode")
-               (string= major-mode "verilog-ts-mode"))
+          ((or (eq major-mode 'verilog-mode)
+               (eq major-mode 'verilog-ts-mode))
            (if ref
                (larumbe/xref--find-ref ref)
              ;; Context based jump if no thing-at-point:
-             (cond (;; Inside a module instance
-                    (and (verilog-ext-point-inside-block 'module)
-                         (verilog-ext-instance-at-point))
-                    (setq ref (match-string-no-properties 1))
-                    (when (or (eq tag-xref-backend 'xref-lsp) ; eglot and lsp work with ...
-                              (eq tag-xref-backend 'eglot))   ; ... symbol at point
-                      (verilog-ext-find-module-instance-bwd-1)
-                      (unless (string= (thing-at-point 'symbol) ref)
-                        (error "[xref-utils]: Error while looking for def with LSP!")))
-                    (larumbe/xref--find-ref ref))
-                   ;; Default fallback
-                   (t
-                    (call-interactively #'xref-find-references)))))
+             (let (instance-data)
+               (cond (;; Inside a module instance
+                      (and (or (verilog-ext-point-inside-block 'module)
+                               (verilog-ext-point-inside-block 'interface))
+                           (setq instance-data (verilog-ext-instance-at-point)))
+                      (setq ref (car (verilog-ext-instance-at-point)))
+                      (when (or (member 'lsp--xref-backend xref-backend-functions)         ; lsp and verilog-ext backends
+                                (member 'eglot-xref-backend xref-backend-functions)        ; work with symbol at point,
+                                (member 'lspce-xref-backend xref-backend-functions)        ; only return valid backend if
+                                (member 'verilog-ext-xref-backend xref-backend-functions)) ; point is over a ref
+                        (verilog-ext-find-module-instance-bwd-1)
+                        (unless (string= (thing-at-point 'symbol) ref)
+                          (error "[xref-utils]: Error while looking for ref with LSP!")))
+                      (larumbe/xref--find-ref ref))
+                     ;; Default fallback
+                     (t
+                      (call-interactively #'xref-find-references))))))
           ;; VHDL
-          ((or (string= major-mode "vhdl-mode")
-               (string= major-mode "vhdl-ts-mode"))
+          ((or (eq major-mode 'vhdl-mode)
+               (eq major-mode 'vhdl-ts-mode))
            (if ref
                (larumbe/xref--find-ref ref)
              ;; Context based jump if no thing-at-point:
              (cond (;; Inside an entity instance
                     (setq ref (car (vhdl-ext-instance-at-point)))
-                    (when (or (eq tag-xref-backend 'xref-lsp) ; eglot and lsp work with ...
-                              (eq tag-xref-backend 'eglot))   ; ... symbol at point
-                      (vhdl-ext-find-entity-instance-bwd)
-                      (goto-char (match-beginning 6))
+                    (when (or (member 'lsp--xref-backend xref-backend-functions)      ; lsp and vhdl-ext backends
+                              (member 'eglot-xref-backend xref-backend-functions)     ; work with symbol at point,
+                              (member 'lspce-xref-backend xref-backend-functions)     ; only return valid backend if
+                              (member 'vhdl-ext-xref-backend xref-backend-functions)) ; point is over a ref
+                      (call-interactively #'vhdl-ext-find-entity-instance-bwd)
+                      ;; Workaround: vhdl-ts-mode backward navigation needs to
+                      ;; place point at the instance name, not the instance type
+                      (when (eq major-mode 'vhdl-ts-mode)
+                        (re-search-forward (concat "\\_<" ref "\\_>") nil :noerror))
                       (unless (string= (thing-at-point 'symbol) ref)
-                        (error "[xref-utils]: Error while looking for def with LSP!")))
+                        (error "[xref-utils]: Error while looking for ref with LSP!")))
                     (larumbe/xref--find-ref ref))
                    ;; Default fallback
                    (t
