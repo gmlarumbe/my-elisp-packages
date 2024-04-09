@@ -96,19 +96,19 @@ With optional prefix, prompt for a specific backend to be used."
   (let ((file (thing-at-point 'filename :noprop))
         (url  (thing-at-point 'url      :noprop))
         (def  (thing-at-point 'symbol   :noprop))
-        (tag-xref-backend (xref-find-backend)) ; Default found backend
         forced-backend)
     (cond (;; Force select-backend
            force-backend
-           (setq forced-backend (intern (completing-read "Backend: " (remove t xref-backend-functions))))
-           (let ((xref-backend-functions `(,forced-backend t)))
-             (if (not def)
-                 (call-interactively #'xref-find-definitions)
-               (setq tag-xref-backend (xref-find-backend))
-               (if (not tag-xref-backend)
-                   (user-error "[xref-utils]: Could not find definitions for `%s' with [%s]" def (symbol-name forced-backend))
-                 (xref-find-definitions def)
-                 (larumbe/xref-report-backend def tag-xref-backend)))))
+           (let ((tag-xref-backend (xref-find-backend))) ; Default found backend
+             (setq forced-backend (intern (completing-read "Backend: " (remove t xref-backend-functions))))
+             (let ((xref-backend-functions `(,forced-backend t)))
+               (if (not def)
+                   (call-interactively #'xref-find-definitions)
+                 (setq tag-xref-backend (xref-find-backend))
+                 (if (not tag-xref-backend)
+                     (user-error "[xref-utils]: Could not find definitions for `%s' with [%s]" def (symbol-name forced-backend))
+                   (xref-find-definitions def)
+                   (larumbe/xref-report-backend def tag-xref-backend))))))
           ;; URL
           (url
            (browse-url url))
@@ -174,13 +174,25 @@ With optional prefix, prompt for a specific backend to be used."
                    (t
                     (call-interactively #'xref-find-definitions)))))
           ;; - Python: elpy
-          ((string-match "python-" (symbol-name major-mode))
+          ((and (string-match "python-" (symbol-name major-mode))
+                (eq 'elpy (xref-find-backend)))
            (if def
                (progn
-                 (setq tag-xref-backend (xref-find-backend)) ; Should be elpy if enabled
                  (xref-find-definitions (elpy-xref--identifier-at-point))
-                 (larumbe/xref-report-backend def tag-xref-backend))
+                 (larumbe/xref-report-backend def 'elpy))
              (call-interactively #'xref-find-definitions)))
+          ;; - JavaScript for Tree-sitter
+          ((string-match "js-" (symbol-name major-mode))
+           (if def
+               (progn
+                 (larumbe/js-tree-sitter-find-def def)
+                 (larumbe/xref-report-backend def 'js-tree-sitter))
+             ;; Find all property nodes in current buffer
+             (let* ((nodes (mapcar #'car (cdr (treesit-induce-sparse-tree (treesit-buffer-root-node) "\\<pair\\>"))))
+                    (nodes-names (mapcar (lambda (node) (treesit-node-text (treesit-node-child-by-field-name node "key"))) nodes))
+                    (node-name (completing-read "Node: " nodes-names)))
+               (larumbe/js-tree-sitter-find-def node-name)
+               (larumbe/xref-report-backend node-name 'js-tree-sitter))))
           ;; Default to use xref
           (t
            (if def
@@ -201,19 +213,19 @@ and will be applied to only files of current `major-mode' if existing in `larumb
 With optional prefix, prompt for a specific backend to be used."
   (interactive "P")
   (let ((ref (thing-at-point 'symbol))
-        (tag-xref-backend (xref-find-backend)) ; Default found backend
         forced-backend)
     (cond (;; Force select-backend
            force-backend
-           (setq forced-backend (intern (completing-read "Backend: " (remove t xref-backend-functions))))
-           (let ((xref-backend-functions `(,forced-backend t)))
-             (if (not ref)
-                 (call-interactively #'xref-find-references)
-               (setq tag-xref-backend (xref-find-backend))
-               (if (not tag-xref-backend)
-                   (user-error "[xref-utils]: Could not find references for `%s' with [%s]" ref (symbol-name forced-backend))
-                 (xref-find-references ref)
-                 (larumbe/xref-report-backend ref tag-xref-backend :ref)))))
+           (let ((tag-xref-backend (xref-find-backend))) ; Default found backend
+             (setq forced-backend (intern (completing-read "Backend: " (remove t xref-backend-functions))))
+             (let ((xref-backend-functions `(,forced-backend t)))
+               (if (not ref)
+                   (call-interactively #'xref-find-references)
+                 (setq tag-xref-backend (xref-find-backend))
+                 (if (not tag-xref-backend)
+                     (user-error "[xref-utils]: Could not find references for `%s' with [%s]" ref (symbol-name forced-backend))
+                   (xref-find-references ref)
+                   (larumbe/xref-report-backend ref tag-xref-backend :ref))))))
           ;; LSP-bridge
           ((bound-and-true-p lsp-bridge-mode)
            (lsp-bridge-find-references))
@@ -263,14 +275,40 @@ With optional prefix, prompt for a specific backend to be used."
                    ;; Default fallback
                    (t
                     (call-interactively #'xref-find-references)))))
-          (;; Python
-           (string-match "python-" (symbol-name major-mode))
+          ;; Python - elpy
+          ((and (string-match "python-" (symbol-name major-mode))
+                (eq 'elpy (xref-find-backend)))
            (if ref
                (progn
-                 (setq tag-xref-backend (xref-find-backend))
                  (xref-find-references (elpy-xref--identifier-at-point))
-                 (larumbe/xref-report-backend ref tag-xref-backend :ref)) ; Should be elpy if enabled
+                 (larumbe/xref-report-backend ref 'elpy :ref))
              (call-interactively #'xref-find-references)))
+          ;; - JavaScript for Tree-sitter
+          ((string-match "js-" (symbol-name major-mode))
+           ;; Force horizontal window split
+           (let ((split-width-threshold 0)
+                 (split-height-threshold nil))
+             (if ref
+                 (progn
+                   ;; INFO: Dirty (yet effective) hack to run a command in an ivy/swiper minibuffer call:
+                   ;;  - https://emacs.stackexchange.com/questions/52280/how-to-call-ivy-occur-programmatically
+                   (run-at-time nil nil #'ivy-occur)
+                   (larumbe/symbol-at-point))
+               ;; Find all property nodes in current buffer
+               (let* ((nodes (mapcar #'car (cdr (treesit-induce-sparse-tree (treesit-buffer-root-node) "\\<member_expression\\>"))))
+                      (nodes-names (delete-dups (mapcar (lambda (node) (treesit-node-text (treesit-node-child-by-field-name node "property"))) nodes)))
+                      (node-name (completing-read "Node: " nodes-names))
+                      (orig-buf (current-buffer)))
+                 ;; (save-window-excursion
+                 (run-at-time nil nil #'ivy-occur)
+                 ;; (run-at-time nil nil (lambda () (save-window-excursion (ivy-occur)))) ;; (run-at-time nil nil (lambda ()
+                 ;;                        (ivy-occur)
+                 ;;                        (pop-to-buffer orig-buf)))
+                 ;; (run-at-time nil nil (lambda ()
+                 ;;                        (pop-to-buffer orig-buf)))
+                 (swiper (concat "\\_<" node-name "\\_>")))
+               ;; (pop-to-buffer orig-buf)
+               )))
           ;; Default
           (t (if ref
                  (larumbe/xref--find-ref ref)
