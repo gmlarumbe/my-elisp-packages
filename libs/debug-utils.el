@@ -19,7 +19,7 @@
 (defun larumbe/tree-sitter-parse-current-buffer ()
   (interactive)
   (let ((cmd "cd /path/to/tree-sitter-verilog && tree-sitter parse larumbe/"))
-    (setq cmd (concat cmd (file-name-nondirectory buffer-file-name)))
+    (setq cmd (file-name-concat cmd (file-name-nondirectory buffer-file-name)))
     (compile cmd)))
 
 ;;;###autoload
@@ -43,6 +43,18 @@
     (call-interactively #'eglot)))
 
 ;;;###autoload
+(defun larumbe/lsp-bridge-toggle ()
+  "Copied from `lsp-bridge-restart-process'."
+  (interactive)
+  (lsp-bridge-diagnostic-hide-overlays)
+  (if lsp-bridge-mode
+      (progn
+        (lsp-bridge-kill-process)
+        (lsp-bridge-mode -1))
+    (call-interactively #'lsp-bridge-mode)
+    (lsp-bridge-start-process)))
+
+;;;###autoload
 (defun larumbe/lsp-verilog-set ()
   (interactive)
   (let ((server-id (intern (completing-read "Server-id: " verilog-ext-lsp-server-ids nil t))))
@@ -55,6 +67,33 @@
   (let ((server-id (intern (completing-read "Server-id: " vhdl-ext-lsp-server-ids nil t))))
     (vhdl-ext-eglot-set-server server-id)
     (vhdl-ext-lsp-set-server server-id)))
+
+;;;###autoload
+(defun larumbe/tree-sitter-add-conflicts-regenerate ()
+  "Updates list of conflicts.
+Needs a *vterm* buffer open."
+  (interactive)
+  (let (conflicts)
+    (pop-to-buffer "*vterm*")
+    (vterm-copy-mode)
+    (vterm-end-of-line)
+    (save-excursion
+      (re-search-backward "Add a conflict for these rules: \\(?1:.*\\)$"))
+    (setq conflicts (match-string-no-properties 1))
+    (setq conflicts (replace-regexp-in-string "`," ","  conflicts))
+    (setq conflicts (replace-regexp-in-string "`"  "$." conflicts))
+    (setq conflicts (replace-regexp-in-string "\$\.$" ""  conflicts))
+    (setq conflicts (concat "[" conflicts "],"))
+    (vterm-copy-mode-done 0)
+    (save-excursion
+      (pop-to-buffer "grammar.js")
+      (goto-char (point-max))
+      (re-search-backward "],")
+      (split-line)
+      (insert conflicts)
+      (indent-region (line-beginning-position) (line-end-position))
+      (save-buffer))
+    (process-send-string vterm--process "tree-sitter generate\C-m")))
 
 
 (provide 'debug-utils)
