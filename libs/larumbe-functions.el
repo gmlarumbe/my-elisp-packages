@@ -339,7 +339,7 @@ Assummes line number is of the form: filepath:[0-9]+"
 (defun larumbe/newline-advice (&optional ARG INTERACTIVE)
   "Advice to set :before-until for newline functions of major-modes that
 kill *ag* or *xref* buffers."
-  (let* ((buf-list '("*xref*" "*ag search*" "*ripgrep-search*" "*Help*"))
+  (let* ((buf-list '("*xref*" "*ag search*" "*ripgrep-search*" "*Help*" "*Occur*" "*ivy-occur"))
          ;; INFO: At some point tried to add the "*Compile-Log*" buffer, but very
          ;; rare bugs appeared when byte/native compiling, removing code from
          ;; current buffer...
@@ -348,7 +348,18 @@ kill *ag* or *xref* buffers."
     ;; Look for buffers sequentialy and break loop when one is found
     (catch 'found
       (dolist (buf buf-list)
-        (setq buf-win (get-buffer-window buf))
+        (setq buf-win (or
+                       ;; 1st option) Check with buffer name
+                       (get-buffer-window buf)
+                       ;; 2nd option) Check with pattern (useful for *ivy- or *ripgrep- buffers)
+                       (let* ((matched-open-bufs (seq-filter (lambda ($buf)
+                                                               (string-match "*ivy-occur" $buf))
+                                                             (mapcar #'buffer-name (buffer-list))))
+                              (matched-visible-bufs (seq-filter (lambda ($buf)
+                                                                  (get-buffer-window $buf))
+                                                                matched-open-bufs)))
+                         (when matched-visible-bufs
+                           (get-buffer-window (car matched-visible-bufs))))))
         ;; Kill corresponding window and buffer
         (when buf-win
           (quit-window t buf-win)
