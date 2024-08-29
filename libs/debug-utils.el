@@ -18,7 +18,7 @@
 ;;;###autoload
 (defun larumbe/tree-sitter-parse-current-buffer ()
   (interactive)
-  (let ((cmd "cd /path/to/tree-sitter-verilog && tree-sitter parse larumbe/"))
+  (let ((cmd "cd /home/gonz/Repos/foss/tree-sitter-verilog && tree-sitter parse larumbe"))
     (setq cmd (file-name-concat cmd (file-name-nondirectory buffer-file-name)))
     (compile cmd)))
 
@@ -94,6 +94,39 @@ Needs a *vterm* buffer open."
       (indent-region (line-beginning-position) (line-end-position))
       (save-buffer))
     (process-send-string vterm--process "tree-sitter generate\C-m")))
+
+
+;;;###autoload
+(defun larumbe/tree-sitter-format-buffer-for-conflicts ()
+  "Convert conflict in the output of terminal to a formatted version for grammar.js.
+Steps:
+1 - Copy conflicts from vterm to *scratch*
+2 - Run this command in the *scratch* buffer
+3 - Paste the resulting text in the grammar.js file."
+  (interactive)
+  (unless (string= (buffer-name) "*scratch*")
+    (user-error "Copy conflicts from vterm to *scratch* buffer first and execute there!"))
+  (replace-regexp-in-region " `" " \$\." (point-min) (point-max))
+  (replace-regexp-in-region "`," "," (point-min) (point-max))
+  (replace-regexp-in-region "`" "" (point-min) (point-max))
+  (replace-regexp-in-region "^\s*\\$" "[$" (point-min) (point-max))
+  (replace-regexp-in-region "\n" "]\n" (point-min) (point-max)))
+
+
+(defun larumbe/tree-sitter-comment-conflicts ()
+  "Comment conflicts in the *scratch* buffer, previously formatted via
+`larumbe/tree-sitter-format-buffer-for-conflicts'."
+  (interactive)
+  (unless (string= (buffer-name) "*scratch*")
+    (user-error "Make sure conflicts are formatted and in *scratch* buffer!"))
+  (let ((conflicts (split-string (buffer-substring-no-properties (point-min) (point-max)) "\n")))
+    (pop-to-buffer "grammar.js")
+    (dolist (conflict conflicts)
+      (goto-char (point-min))
+      (if (search-forward conflict nil :noerror)
+          (comment-line 1)
+        (message "Skipping: %s" confict)))))
+
 
 
 (provide 'debug-utils)
