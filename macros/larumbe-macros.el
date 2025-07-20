@@ -54,24 +54,24 @@
 (defun larumbe/macros-exwm-firefox-youtube-dl ()
   "Download MP3 from current's Firefox window link."
   (interactive)
-  (let ((dir "~/youtube-dl-mp3")
+  (let ((dir "/mnt/Windows/Data/Music/Gym")
         (link)
         (buf)
         (cmd))
     (save-window-excursion
-      (switch-to-buffer "Firefox")
+      (switch-to-buffer "firefox")
       (exwm-input--fake-key ?\C-l) ; Get URL
+      (sleep-for 0.25)
       (exwm-input--fake-key ?\C-c) ; Copy to clipboard
       ;; (exwm-input--fake-key 'f6)   ; Go back from URL. TODO: Still doesn't seem to fully work
       (setq link (current-kill 0))
-      (larumbe/ansi-term-new)
       (setq buf (get-buffer-process (current-buffer)))
       (setq cmd (concat
                  "mkdir -p " dir " && "
                  "cd " dir " && "
                  "youtube-dl --extract-audio --audio-format mp3 " link
                  "\n"))
-      (comint-send-string buf cmd))))
+      (async-shell-command cmd buf))))
 
 
 (provide 'larumbe-macros)
