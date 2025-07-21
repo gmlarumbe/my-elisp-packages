@@ -21,15 +21,25 @@
 (defvar untabify-trailing-delete-whitespace t) ; Default initial value
 (defvar untabify-trailing-disable-on-files nil
   "List of files where Untabify/Delete trailing whitespace should not be executed.")
+(defvar untabify-trailing-disable-on-modes nil
+  "List of major-modes where Untabify/Delete trailing whitespace should not be executed.")
 
 (defun untabify-trailing-whitespace ()
   "Untabify and delete trailing whitespace depending on MAJOR-MODE of current buffer.
 Meant to be used as a wrapper for write-file-functions hook."
   (interactive)
-  (unless (or (string-match "makefile-" (format "%s" major-mode)) ; Do not untabify `makefile-mode'
-              (member buffer-file-name (mapcar #'expand-file-name untabify-trailing-disable-on-files)))
-    (untabify (point-min) (point-max))
-    (delete-trailing-whitespace (point-min) (point-max))))
+  (cond ((string-match "makefile-" (format "%s" major-mode))
+         (message "Skipping untabify for makefile-mode")
+         nil)
+        ((member buffer-file-name (mapcar #'expand-file-name untabify-trailing-disable-on-files))
+         (message "Skipping untabify for file %s" (file-name-nondirectory buffer-file-name))
+         nil)
+        ((member major-mode untabify-trailing-disable-on-modes)
+         (message "Skipping untabify for %s" major-mode)
+         nil)
+        (t
+         (untabify (point-min) (point-max))
+         (delete-trailing-whitespace (point-min) (point-max)))))
 
 ;;;###autoload
 (define-minor-mode untabify-trailing-ws-mode
