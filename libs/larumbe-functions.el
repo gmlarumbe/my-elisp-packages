@@ -339,11 +339,11 @@ Assummes line number is of the form: filepath:[0-9]+"
 (defun larumbe/newline-advice (&optional ARG INTERACTIVE)
   "Advice to set :before-until for newline functions of major-modes that
 kill *ag* or *xref* buffers."
-  (let* ((buf-list '("*xref*" "*ag search*" "*ripgrep-search*" "*Help*" "*Occur*" "*ivy-occur"))
-         ;; INFO: At some point tried to add the "*Compile-Log*" buffer, but very
+  (let* ((buf-list '("*xref*" "*ag search*" "*ripgrep-search*" "*Help*" "*Occur*"))
+         ;; - At some point tried to add the "*Compile-Log*" buffer, but very
          ;; rare bugs appeared when byte/native compiling, removing code from
          ;; current buffer...
-         ;; INFO: Also tried with *Warnings* but there were initialization errors
+         ;; - Also tried with *Warnings* but there were initialization errors
          buf-win)
     ;; Look for buffers sequentialy and break loop when one is found
     (catch 'found
@@ -351,9 +351,10 @@ kill *ag* or *xref* buffers."
         (setq buf-win (or
                        ;; 1st option) Check with buffer name
                        (get-buffer-window buf)
-                       ;; 2nd option) Check with pattern (useful for *ivy- or *ripgrep- buffers)
+                       ;; 2nd option) Check with pattern (useful for *ivy- or *ripgrep- buffers that are not in wgrep)
                        (let* ((matched-open-bufs (seq-filter (lambda ($buf)
-                                                               (string-match "*ivy-occur" $buf))
+                                                               (and (string-match "*ivy-occur" $buf)     ; `query-replace-skip-read-only' is non-nil when wgrep is active (to avoid closing ivy-wgrep buffer with newline)
+                                                                    (not query-replace-skip-read-only))) ; Check `wgrep-change-to-wgrep-mode'
                                                              (mapcar #'buffer-name (buffer-list))))
                               (matched-visible-bufs (seq-filter (lambda ($buf)
                                                                   (get-buffer-window $buf))

@@ -49,7 +49,7 @@ A non-nil INTERACTIVE argument means to run the `post-self-insert-hook'."
          (beforepos (point))
          (last-command-event ?\n)
          ;; Don't auto-fill if we have a prefix argument.
-         (auto-fill-function (if arg nil auto-fill-function))
+         (inhibit-auto-fill (or inhibit-auto-fill arg))
          (arg (prefix-numeric-value arg))
          (procsym (make-symbol "newline-postproc")) ;(bug#46326)
          (postproc
