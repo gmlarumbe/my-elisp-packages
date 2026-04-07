@@ -25,10 +25,10 @@ available at GTAGSCONF globalrc file."
 ;; List of available regexps for different languages gtags extraction
 ;; If cdr of an element is a string use it as the regexp of the file extension
 ;; If cdr of an element is a cons cell, use first element as the regexp and second as the exclude-re
-(defvar larumbe/gtags-create-tags-lang-regexps
-  '(("(System)Verilog+VHDL" . ("\\.\\(s?vh?\\|vhdl?\\)$" . ".*/design/\\(ip/bd/\\|syn\\)"))
-    ("(System)Verilog"      . ("\\.[s]?v[h]?$"     . ".*/design/\\(ip/bd/\\|syn\\)")) ; Exclude re
-    ("VHDL"                 . ("\\.vhd[l]?$"       . ".*/design/\\(ip/bd/\\|syn\\)"))
+(defconst larumbe/gtags-create-tags-lang-regexps
+  '(("(System)Verilog+VHDL" . ("\\.\\(s?vh?\\|vhdl?\\)$" . ".*/design/\\(ip\\|bd\\|.*_syn\\)"))
+    ("(System)Verilog"      . ("\\.[s]?v[h]?$"     . ".*/design/\\(ip\\|bd\\|.*_syn\\)")) ; Exclude re
+    ("VHDL"                 . ("\\.vhd[l]?$"       . ".*/design/\\(ip\\|bd\\|.*_syn\\)"))
     ("Python"               . "\\.py$")
     ("Elisp"                . "\\.el$")
     ("c"                    . "\\.[ch]\\\(pp\\)?$")
