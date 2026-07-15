@@ -344,6 +344,7 @@ kill *ag* or *xref* buffers."
          ;; rare bugs appeared when byte/native compiling, removing code from
          ;; current buffer...
          ;; - Also tried with *Warnings* but there were initialization errors
+         ;; - "*rg*" did not work as expected either
          buf-win)
     ;; Look for buffers sequentialy and break loop when one is found
     (catch 'found
