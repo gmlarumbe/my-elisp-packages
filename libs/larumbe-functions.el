@@ -125,8 +125,9 @@ in the filename and jump to line if file is of the form: file:[0-9]+"
                  (setq line-num (string-to-number (buffer-substring (match-beginning 0) (match-end 0))))))
            (xref-push-marker-stack)
            (find-file-at-point filename)
+           (beginning-of-buffer)
            (unless (equal line-num nil)
-             (forward-line line-num)))
+             (forward-line (1- line-num))))
           (t
            (find-file-at-point)
            (message "Unexpected case in `larumbe/find-file-dwim'!")))))
